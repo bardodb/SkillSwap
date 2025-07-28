@@ -395,7 +395,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { authService, skillService, categoryService, exchangeService, statsService } from '@/services/api'
 import BaseButton from '@/components/ui/BaseButton.vue'
@@ -569,16 +569,20 @@ const loadDashboard = async () => {
 
     // Carregar dados do usuário
     const userResponse = await authService.getUser()
-    user.value = userResponse.data.user
-
-    if (!user.value) {
+    if (userResponse.data && userResponse.data.success) {
+      user.value = userResponse.data.data
+    } else {
       throw new Error('Usuário não encontrado')
     }
 
     // Carregar habilidades do usuário
     try {
       const skillsResponse = await skillService.getMySkills()
-      userSkills.value = skillsResponse.data.skills || []
+      if (skillsResponse.data && skillsResponse.data.success) {
+        userSkills.value = skillsResponse.data.data || []
+      } else {
+        userSkills.value = []
+      }
     } catch (skillsError) {
       console.error('Erro ao carregar skills:', skillsError)
       userSkills.value = []
@@ -603,43 +607,50 @@ const loadDashboard = async () => {
 
     // Carregar categorias
     const categoriesResponse = await categoryService.getAll()
-    categories.value = categoriesResponse.data.categories || []
+    if (categoriesResponse.data && categoriesResponse.data.success) {
+      categories.value = categoriesResponse.data.data || []
+    } else {
+      categories.value = []
+    }
 
-    // Carregar trocas recentes (mock data)
-    recentExchanges.value = [
-      {
-        id: 1,
-        partnerName: 'Maria Silva',
-        skillExchanged: 'Vue.js ↔ Design UX/UI',
-        status: 'completed',
-        date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-      },
-      {
-        id: 2,
-        partnerName: 'João Santos',
-        skillExchanged: 'Laravel ↔ Marketing Digital',
-        status: 'pending',
-        date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+    // Carregar trocas recentes
+    try {
+      const exchangesResponse = await exchangeService.getAll()
+      if (exchangesResponse.data && exchangesResponse.data.success) {
+        recentExchanges.value = exchangesResponse.data.data.map((exchange: any) => ({
+          id: exchange.id,
+          partnerName: exchange.partner.name,
+          skillExchanged: `${exchange.offered_skill.title} ↔ ${exchange.requested_skill.title}`,
+          status: exchange.status,
+          date: exchange.created_at
+        }))
+      } else {
+        recentExchanges.value = []
       }
-    ]
+    } catch (exchangesError) {
+      console.error('Erro ao carregar trocas recentes:', exchangesError)
+      recentExchanges.value = []
+    }
 
-    // Carregar matches potenciais (mock data)
-    potentialMatches.value = [
-      {
-        id: 1,
-        name: 'Ana Costa',
-        skillTitle: 'React Advanced',
-        rating: 4.8,
-        location: 'São Paulo, SP'
-      },
-      {
-        id: 2,
-        name: 'Carlos Lima',
-        skillTitle: 'Photoshop',
-        rating: 4.5,
-        location: 'Rio de Janeiro, RJ'
+    // Carregar matches potenciais
+    try {
+      const matchesResponse = await skillService.getMatches()
+      if (matchesResponse.data && matchesResponse.data.success) {
+        potentialMatches.value = matchesResponse.data.data.map((match: any) => ({
+          id: match.id,
+          name: match.user_name,
+          skillTitle: match.skill_title,
+          rating: match.user_rating,
+          location: match.user_location,
+          userId: match.user_id
+        }))
+      } else {
+        potentialMatches.value = []
       }
-    ]
+    } catch (matchesError) {
+      console.error('Erro ao carregar matches potenciais:', matchesError)
+      potentialMatches.value = []
+    }
 
     // Preencher formulário de edição
     if (user.value) {
@@ -656,6 +667,24 @@ const loadDashboard = async () => {
     error.value = 'Erro ao carregar dados do dashboard'
   } finally {
     loading.value = false
+  }
+}
+
+// Função para atualizar estatísticas do usuário
+const updateUserStats = async () => {
+  try {
+    const userStatsResponse = await statsService.getUserStats()
+    if (userStatsResponse.data && userStatsResponse.data.success) {
+      const data = userStatsResponse.data.data
+      realUserStats.value = {
+        skills: Number(data.skills) || 0,
+        exchanges: Number(data.exchanges) || 0,
+        connections: Number(data.connections) || 0,
+        rating: Number(data.rating) || 0
+      }
+    }
+  } catch (statsError) {
+    console.error('Erro ao atualizar estatísticas do usuário:', statsError)
   }
 }
 
@@ -689,7 +718,14 @@ const addSkill = async () => {
     }
     
     const response = await skillService.create(skillData)
-    userSkills.value.push(response.data.skill)
+    if (response.data && response.data.success) {
+      userSkills.value.push(response.data.data)
+      
+      // Atualizar estatísticas em tempo real
+      await updateUserStats()
+    } else {
+      throw new Error('Erro ao criar habilidade')
+    }
     
     // Reset form
     newSkill.value = {
@@ -713,8 +749,15 @@ const deleteSkill = async (skillId: number) => {
   if (!confirm('Tem certeza que deseja excluir esta habilidade?')) return
   
   try {
-    await skillService.delete(skillId)
-    userSkills.value = userSkills.value.filter(skill => skill.id !== skillId)
+    const response = await skillService.delete(skillId)
+    if (response.data && response.data.success) {
+      userSkills.value = userSkills.value.filter(skill => skill.id !== skillId)
+      
+      // Atualizar estatísticas em tempo real
+      await updateUserStats()
+    } else {
+      throw new Error('Erro ao deletar habilidade')
+    }
   } catch (err) {
     console.error('Erro ao deletar habilidade:', err)
     error.value = 'Erro ao deletar habilidade'
@@ -726,8 +769,22 @@ const viewMatchProfile = (matchId: number) => {
   router.push(`/users/${matchId}/profile`)
 }
 
+// Intervalo para atualização automática das estatísticas
+let statsUpdateInterval: number | null = null
+
 onMounted(() => {
   loadDashboard()
+  
+  // Atualizar estatísticas a cada 30 segundos
+  statsUpdateInterval = setInterval(async () => {
+    await updateUserStats()
+  }, 30000)
+})
+
+onUnmounted(() => {
+  if (statsUpdateInterval) {
+    clearInterval(statsUpdateInterval)
+  }
 })
 </script>
 

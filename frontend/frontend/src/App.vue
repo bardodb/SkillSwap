@@ -20,7 +20,11 @@ const toggleMobileMenu = () => {
 
 onMounted(async () => {
   // Inicializar autenticação se houver token
-  await authStore.initializeAuth()
+  try {
+    await authStore.initializeAuth()
+  } catch (error) {
+    console.error('Erro ao inicializar autenticação:', error)
+  }
 })
 </script>
 

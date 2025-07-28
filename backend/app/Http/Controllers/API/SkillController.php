@@ -47,7 +47,7 @@ class SkillController extends Controller
 
         return response()->json([
             'success' => true,
-            'skills' => $skills->items(),
+            'data' => $skills->items(),
             'pagination' => [
                 'current_page' => $skills->currentPage(),
                 'last_page' => $skills->lastPage(),
@@ -69,7 +69,7 @@ class SkillController extends Controller
 
         return response()->json([
             'success' => true,
-            'skills' => $skills,
+            'data' => $skills,
         ]);
     }
 
@@ -116,8 +116,8 @@ class SkillController extends Controller
         $skill->load(['user', 'category']);
 
         return response()->json([
-            'message' => 'Skill created successfully',
-            'skill' => $skill
+            'success' => true,
+            'data' => $skill
         ], 201);
     }
 
@@ -129,7 +129,8 @@ class SkillController extends Controller
         $skill->load(['user', 'category']);
         
         return response()->json([
-            'skill' => $skill
+            'success' => true,
+            'data' => $skill
         ]);
     }
 
@@ -177,8 +178,8 @@ class SkillController extends Controller
         $skill->load(['user', 'category']);
 
         return response()->json([
-            'message' => 'Skill updated successfully',
-            'skill' => $skill
+            'success' => true,
+            'data' => $skill
         ]);
     }
 
@@ -197,6 +198,7 @@ class SkillController extends Controller
         $skill->delete();
 
         return response()->json([
+            'success' => true,
             'message' => 'Skill deleted successfully'
         ]);
     }
@@ -214,11 +216,11 @@ class SkillController extends Controller
             ->get();
             
         if ($userSkills->isEmpty()) {
-            return response()->json([
-                'success' => true,
-                'matches' => [],
-                'message' => 'Add some skills to find matches'
-            ]);
+                    return response()->json([
+            'success' => true,
+            'data' => [],
+            'message' => 'Add some skills to find matches'
+        ]);
         }
 
         // Find skills from other users in different categories
@@ -254,7 +256,7 @@ class SkillController extends Controller
 
         return response()->json([
             'success' => true,
-            'matches' => $matches
+            'data' => $matches
         ]);
     }
 }

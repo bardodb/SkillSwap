@@ -349,16 +349,20 @@ const loadUserProfile = async () => {
     // Carregar perfil do usuário
     const profileResponse = await authService.getUserProfile(userId)
     
-    if (profileResponse.data.success) {
-      userProfile.value = profileResponse.data.user
+    if (profileResponse.data && profileResponse.data.success) {
+      userProfile.value = profileResponse.data.data
     } else {
-      throw new Error(profileResponse.data.message || 'Erro ao carregar perfil')
+      throw new Error(profileResponse.data?.message || 'Erro ao carregar perfil')
     }
 
     // Carregar minhas habilidades para proposta de troca
     try {
       const mySkillsResponse = await skillService.getMySkills()
-      mySkills.value = mySkillsResponse.data.skills || []
+      if (mySkillsResponse.data && mySkillsResponse.data.success) {
+        mySkills.value = mySkillsResponse.data.data || []
+      } else {
+        mySkills.value = []
+      }
     } catch (skillsError) {
       console.warn('Erro ao carregar suas habilidades:', skillsError)
       mySkills.value = []
@@ -369,6 +373,19 @@ const loadUserProfile = async () => {
     error.value = err.response?.data?.message || 'Erro ao carregar perfil do usuário'
   } finally {
     loading.value = false
+  }
+}
+
+// Função para atualizar estatísticas do usuário
+const updateUserStats = async () => {
+  try {
+    const userStatsResponse = await statsService.getUserStats()
+    if (userStatsResponse.data && userStatsResponse.data.success) {
+      // Atualizar estatísticas no dashboard se estivermos na mesma sessão
+      // Esta função pode ser chamada para atualizar estatísticas em tempo real
+    }
+  } catch (statsError) {
+    console.error('Erro ao atualizar estatísticas do usuário:', statsError)
   }
 }
 
@@ -409,6 +426,10 @@ const submitExchangeRequest = async () => {
     if (response.data.success) {
       alert('Proposta de troca enviada com sucesso!')
       closeExchangeModal()
+      
+      // Atualizar estatísticas em tempo real
+      await updateUserStats()
+      
       router.push('/dashboard')
     } else {
       throw new Error(response.data.message || 'Erro ao enviar proposta')

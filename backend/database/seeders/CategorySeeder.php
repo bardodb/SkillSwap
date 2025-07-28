@@ -73,6 +73,66 @@ class CategorySeeder extends Seeder
                 'description' => 'Tutoria, ensino e métodos pedagógicos',
                 'icon' => 'book',
                 'color' => '#6366F1'
+            ],
+            [
+                'name' => 'Marketing Digital',
+                'description' => 'SEO, SEM, redes sociais e marketing online',
+                'icon' => 'trending-up',
+                'color' => '#F59E0B'
+            ],
+            [
+                'name' => 'Finanças',
+                'description' => 'Investimentos, planejamento financeiro e contabilidade',
+                'icon' => 'dollar-sign',
+                'color' => '#10B981'
+            ],
+            [
+                'name' => 'Saúde',
+                'description' => 'Nutrição, bem-estar e cuidados pessoais',
+                'icon' => 'heart',
+                'color' => '#EF4444'
+            ],
+            [
+                'name' => 'Tecnologia',
+                'description' => 'Hardware, software e inovações tecnológicas',
+                'icon' => 'cpu',
+                'color' => '#3B82F6'
+            ],
+            [
+                'name' => 'Arte',
+                'description' => 'Pintura, desenho, escultura e artes visuais',
+                'icon' => 'brush',
+                'color' => '#EC4899'
+            ],
+            [
+                'name' => 'Jardinagem',
+                'description' => 'Cultivo de plantas, paisagismo e horticultura',
+                'icon' => 'leaf',
+                'color' => '#84CC16'
+            ],
+            [
+                'name' => 'Meditação',
+                'description' => 'Mindfulness, yoga e práticas de relaxamento',
+                'icon' => 'zap',
+                'color' => '#8B5CF6'
+            ],
+            [
+                'name' => 'Escrita',
+                'description' => 'Redação, literatura e comunicação escrita',
+                'icon' => 'edit',
+                'color' => '#6366F1'
+            ],
+            [
+                'name' => 'Dança',
+                'description' => 'Dança, coreografia e expressão corporal',
+                'icon' => 'music',
+                'color' => '#F59E0B'
+            ],
+            [
+                'name' => 'Jogos',
+                'description' => 'Desenvolvimento de jogos e game design',
+                'icon' => 'gamepad-2',
+                'color' => '#F97316'
             ]
         ];
 

@@ -278,6 +278,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { categoryService, skillService } from '@/services/api'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseCard from '@/components/ui/BaseCard.vue'
 import BaseBadge from '@/components/ui/BaseBadge.vue'
@@ -350,19 +351,16 @@ const filteredSkills = computed(() => {
 // Methods
 const loadCategories = async () => {
   try {
-    // Mock data
-    categories.value = [
-      { id: 1, name: 'Programação', description: 'Desenvolvimento web, mobile e desktop', color: '#3b82f6', skills_count: 25 },
-      { id: 2, name: 'Design', description: 'UI/UX, Design Gráfico e Ilustração', color: '#f59e0b', skills_count: 18 },
-      { id: 3, name: 'Marketing', description: 'Marketing Digital, SEO e Redes Sociais', color: '#ef4444', skills_count: 15 },
-      { id: 4, name: 'Idiomas', description: 'Inglês, Espanhol, Francês e outros', color: '#22c55e', skills_count: 12 },
-      { id: 5, name: 'Música', description: 'Instrumentos, Teoria Musical e Produção', color: '#8b5cf6', skills_count: 10 },
-      { id: 6, name: 'Culinária', description: 'Receitas, Técnicas e Gastronomia', color: '#f97316', skills_count: 8 },
-      { id: 7, name: 'Negócios', description: 'Empreendedorismo, Finanças e Gestão', color: '#06b6d4', skills_count: 14 },
-      { id: 8, name: 'Esportes', description: 'Fitness, Yoga, Artes Marciais', color: '#84cc16', skills_count: 9 }
-    ]
+    const response = await categoryService.getAll()
+    if (response.data && response.data.success) {
+      categories.value = response.data.data || []
+    } else {
+      console.warn('Resposta inválida ao carregar categorias')
+      categories.value = []
+    }
   } catch (err) {
     console.error('Erro ao carregar categorias:', err)
+    categories.value = []
   }
 }
 
@@ -371,41 +369,17 @@ const loadSkills = async () => {
   error.value = null
   
   try {
-    // Mock data
-    skills.value = [
-      // Programação
-      { id: 1, name: 'JavaScript Básico', description: 'Aprenda os fundamentos do JavaScript moderno', level: 'Iniciante', category_name: 'Programação', category_color: '#3b82f6', instructor_name: 'Ana Silva', rating: 4.8, category_id: 1 },
-      { id: 2, name: 'React Avançado', description: 'Desenvolva aplicações complexas com React', level: 'Avançado', category_name: 'Programação', category_color: '#3b82f6', instructor_name: 'Carlos Santos', rating: 4.9, category_id: 1 },
-      { id: 3, name: 'Python para Dados', description: 'Análise de dados com Python e Pandas', level: 'Intermediário', category_name: 'Programação', category_color: '#3b82f6', instructor_name: 'Maria Oliveira', rating: 4.7, category_id: 1 },
-      
-      // Design
-      { id: 4, name: 'UI/UX Design', description: 'Princípios de design de interface e experiência', level: 'Intermediário', category_name: 'Design', category_color: '#f59e0b', instructor_name: 'João Costa', rating: 4.6, category_id: 2 },
-      { id: 5, name: 'Figma Completo', description: 'Domine a ferramenta Figma do básico ao avançado', level: 'Iniciante', category_name: 'Design', category_color: '#f59e0b', instructor_name: 'Laura Pereira', rating: 4.8, category_id: 2 },
-      
-      // Marketing
-      { id: 6, name: 'Marketing Digital', description: 'Estratégias de marketing para o mundo digital', level: 'Iniciante', category_name: 'Marketing', category_color: '#ef4444', instructor_name: 'Pedro Lima', rating: 4.5, category_id: 3 },
-      { id: 7, name: 'SEO Avançado', description: 'Otimização para mecanismos de busca', level: 'Avançado', category_name: 'Marketing', category_color: '#ef4444', instructor_name: 'Sofia Rodrigues', rating: 4.9, category_id: 3 },
-      
-      // Idiomas
-      { id: 8, name: 'Inglês Conversação', description: 'Pratique conversação em inglês do dia a dia', level: 'Intermediário', category_name: 'Idiomas', category_color: '#22c55e', instructor_name: 'Robert Johnson', rating: 4.7, category_id: 4 },
-      { id: 9, name: 'Espanhol Básico', description: 'Aprenda espanhol desde o zero', level: 'Iniciante', category_name: 'Idiomas', category_color: '#22c55e', instructor_name: 'Carmen García', rating: 4.6, category_id: 4 },
-      
-      // Música
-      { id: 10, name: 'Violão Fingerstyle', description: 'Técnicas avançadas de violão fingerstyle', level: 'Avançado', category_name: 'Música', category_color: '#8b5cf6', instructor_name: 'Lucas Mendes', rating: 4.8, category_id: 5 },
-      { id: 11, name: 'Piano Clássico', description: 'Fundamentos do piano clássico', level: 'Iniciante', category_name: 'Música', category_color: '#8b5cf6', instructor_name: 'Helena Bach', rating: 4.9, category_id: 5 },
-      
-      // Culinária
-      { id: 12, name: 'Culinária Italiana', description: 'Pratos tradicionais da culinária italiana', level: 'Intermediário', category_name: 'Culinária', category_color: '#f97316', instructor_name: 'Giuseppe Cadura', rating: 4.7, category_id: 6 },
-      
-      // Negócios
-      { id: 13, name: 'Gestão de Projetos', description: 'Metodologias ágeis e gestão eficiente', level: 'Intermediário', category_name: 'Negócios', category_color: '#06b6d4', instructor_name: 'Rafael Ferreira', rating: 4.6, category_id: 7 },
-      
-      // Esportes
-      { id: 14, name: 'Yoga para Iniciantes', description: 'Posturas básicas e respiração no yoga', level: 'Iniciante', category_name: 'Esportes', category_color: '#84cc16', instructor_name: 'Namastê Zen', rating: 4.8, category_id: 8 }
-    ]
+    const response = await skillService.getAll()
+    if (response.data && response.data.success) {
+      skills.value = response.data.data || []
+    } else {
+      console.warn('Resposta inválida ao carregar habilidades')
+      skills.value = []
+    }
   } catch (err) {
-    error.value = 'Erro ao carregar habilidades'
     console.error('Erro ao carregar habilidades:', err)
+    error.value = 'Erro ao carregar habilidades'
+    skills.value = []
   } finally {
     loading.value = false
   }

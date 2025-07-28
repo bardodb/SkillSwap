@@ -41,8 +41,8 @@ class AuthController extends Controller
         $token = $user->createToken('api-token')->plainTextToken;
 
         return response()->json([
-            'message' => 'User registered successfully',
-            'user' => $user,
+            'success' => true,
+            'data' => $user,
             'token' => $token
         ], 201);
     }
@@ -72,8 +72,8 @@ class AuthController extends Controller
         $token = $user->createToken('api-token')->plainTextToken;
 
         return response()->json([
-            'message' => 'Login successful',
-            'user' => $user,
+            'success' => true,
+            'data' => $user,
             'token' => $token
         ]);
     }
@@ -83,6 +83,7 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()->delete();
 
         return response()->json([
+            'success' => true,
             'message' => 'Logged out successfully'
         ]);
     }
@@ -95,7 +96,8 @@ class AuthController extends Controller
         $user->rating = (float) ($user->rating ?: 0.0);
         
         return response()->json([
-            'user' => $user
+            'success' => true,
+            'data' => $user
         ]);
     }
 
@@ -127,8 +129,8 @@ class AuthController extends Controller
         $user->rating = (float) ($user->rating ?: 0.0);
 
         return response()->json([
-            'message' => 'Profile updated successfully',
-            'user' => $user
+            'success' => true,
+            'data' => $user
         ]);
     }
 
@@ -178,7 +180,7 @@ class AuthController extends Controller
 
             return response()->json([
                 'success' => true,
-                'user' => $publicProfile
+                'data' => $publicProfile
             ]);
             
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {

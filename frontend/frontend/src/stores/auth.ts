@@ -26,9 +26,22 @@ export const useAuthStore = defineStore('auth', () => {
   const initializeAuth = async () => {
     if (token.value) {
       try {
+        // Tentar carregar usuário do localStorage primeiro
+        const savedUser = localStorage.getItem('user')
+        if (savedUser) {
+          user.value = JSON.parse(savedUser)
+        }
+        
+        // Verificar se o token ainda é válido
         const response = await authService.getUser()
-        user.value = response.data.user
+        if (response.data && response.data.success) {
+          user.value = response.data.data
+          localStorage.setItem('user', JSON.stringify(response.data.data))
+        } else {
+          logout()
+        }
       } catch (error) {
+        console.error('Erro ao inicializar autenticação:', error)
         logout()
       }
     }
@@ -40,15 +53,19 @@ export const useAuthStore = defineStore('auth', () => {
     
     try {
       const response = await authService.login(credentials)
-      const { user: userData, token: authToken } = response.data
-      
-      user.value = userData
-      token.value = authToken
-      
-      localStorage.setItem('token', authToken)
-      localStorage.setItem('user', JSON.stringify(userData))
-      
-      return response.data
+      if (response.data && response.data.success) {
+        const { data: userData, token: authToken } = response.data
+        
+        user.value = userData
+        token.value = authToken
+        
+        localStorage.setItem('token', authToken)
+        localStorage.setItem('user', JSON.stringify(userData))
+        
+        return response.data
+      } else {
+        throw new Error('Resposta inválida do servidor')
+      }
     } catch (err: any) {
       error.value = err.response?.data?.message || 'Erro ao fazer login'
       throw err
@@ -63,15 +80,19 @@ export const useAuthStore = defineStore('auth', () => {
     
     try {
       const response = await authService.register(userData)
-      const { user: newUser, token: authToken } = response.data
-      
-      user.value = newUser
-      token.value = authToken
-      
-      localStorage.setItem('token', authToken)
-      localStorage.setItem('user', JSON.stringify(newUser))
-      
-      return response.data
+      if (response.data && response.data.success) {
+        const { data: newUser, token: authToken } = response.data
+        
+        user.value = newUser
+        token.value = authToken
+        
+        localStorage.setItem('token', authToken)
+        localStorage.setItem('user', JSON.stringify(newUser))
+        
+        return response.data
+      } else {
+        throw new Error('Resposta inválida do servidor')
+      }
     } catch (err: any) {
       error.value = err.response?.data?.message || 'Erro ao criar conta'
       throw err
@@ -101,9 +122,13 @@ export const useAuthStore = defineStore('auth', () => {
     
     try {
       const response = await authService.updateProfile(profileData)
-      user.value = response.data.user
-      localStorage.setItem('user', JSON.stringify(response.data.user))
-      return response.data
+      if (response.data && response.data.success) {
+        user.value = response.data.data
+        localStorage.setItem('user', JSON.stringify(response.data.data))
+        return response.data
+      } else {
+        throw new Error('Resposta inválida do servidor')
+      }
     } catch (err: any) {
       error.value = err.response?.data?.message || 'Erro ao atualizar perfil'
       throw err

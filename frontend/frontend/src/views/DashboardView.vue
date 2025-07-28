@@ -44,7 +44,7 @@
       <!-- Quick Stats Grid -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <!-- Skills Card -->
-        <div class="bg-white rounded-xl shadow-sm border p-6 hover:shadow-md transition-shadow">
+        <div class="bg-white rounded-xl shadow-sm border p-6 hover:shadow-md transition-shadow stats-card">
           <div class="flex items-center justify-between">
             <div>
               <p class="text-sm font-medium text-gray-600">Habilidades</p>
@@ -67,7 +67,7 @@
         </div>
 
         <!-- Exchanges Card -->
-        <div class="bg-white rounded-xl shadow-sm border p-6 hover:shadow-md transition-shadow">
+        <div class="bg-white rounded-xl shadow-sm border p-6 hover:shadow-md transition-shadow stats-card">
           <div class="flex items-center justify-between">
             <div>
               <p class="text-sm font-medium text-gray-600">Trocas</p>
@@ -90,7 +90,7 @@
         </div>
 
         <!-- Rating Card -->
-        <div class="bg-white rounded-xl shadow-sm border p-6 hover:shadow-md transition-shadow">
+        <div class="bg-white rounded-xl shadow-sm border p-6 hover:shadow-md transition-shadow stats-card">
           <div class="flex items-center justify-between">
             <div>
               <p class="text-sm font-medium text-gray-600">Avaliação</p>
@@ -113,7 +113,7 @@
         </div>
 
         <!-- Connections Card -->
-        <div class="bg-white rounded-xl shadow-sm border p-6 hover:shadow-md transition-shadow">
+        <div class="bg-white rounded-xl shadow-sm border p-6 hover:shadow-md transition-shadow stats-card">
           <div class="flex items-center justify-between">
             <div>
               <p class="text-sm font-medium text-gray-600">Conexões</p>
@@ -510,7 +510,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { authService, skillService, categoryService, exchangeService, statsService } from '@/services/api'
 import BaseButton from '@/components/ui/BaseButton.vue'
@@ -696,16 +696,22 @@ const loadDashboard = async () => {
     error.value = null
 
     // Carregar dados do usuário
-    const userResponse = await authService.getUser()
-    if (userResponse.data && userResponse.data.user) {
-      user.value = userResponse.data.user
-    } else {
-      throw new Error('Usuário não encontrado')
+    try {
+      const userResponse = await authService.getUser()
+      if (userResponse.data && userResponse.data.success) {
+        user.value = userResponse.data.data
+      } else {
+        throw new Error('Usuário não encontrado')
+      }
+    } catch (userError) {
+      console.error('Erro ao carregar dados do usuário:', userError)
+      // Se não conseguir carregar o usuário, redirecionar para login
+      router.push('/login')
+      return
     }
 
     // Carregar habilidades do usuário
     await loadUserSkills()
-    console.log('Skills loaded:', userSkills.value) // Debug
 
     // Carregar estatísticas reais do usuário
     try {
@@ -725,7 +731,7 @@ const loadDashboard = async () => {
     // Carregar categorias
     try {
       const categoriesResponse = await categoryService.getAll()
-      if (categoriesResponse.data && categoriesResponse.data.data) {
+      if (categoriesResponse.data && categoriesResponse.data.success) {
         categories.value = categoriesResponse.data.data || []
       } else {
         console.warn('Resposta inválida ao carregar categorias')
@@ -736,23 +742,24 @@ const loadDashboard = async () => {
       categories.value = []
     }
 
-    // Carregar trocas recentes (mock data)
-    recentExchanges.value = [
-      {
-        id: 1,
-        partnerName: 'Maria Silva',
-        skillExchanged: 'Vue.js ↔ Design UX/UI',
-        status: 'completed',
-        date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-      },
-      {
-        id: 2,
-        partnerName: 'João Santos',
-        skillExchanged: 'Laravel ↔ Marketing Digital',
-        status: 'pending',
-        date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+    // Carregar trocas recentes
+    try {
+      const exchangesResponse = await exchangeService.getAll()
+      if (exchangesResponse.data && exchangesResponse.data.success) {
+        recentExchanges.value = exchangesResponse.data.data.map((exchange: any) => ({
+          id: exchange.id,
+          partnerName: exchange.partner.name,
+          skillExchanged: `${exchange.offered_skill.title} ↔ ${exchange.requested_skill.title}`,
+          status: exchange.status,
+          date: exchange.created_at
+        }))
+      } else {
+        recentExchanges.value = []
       }
-    ]
+    } catch (exchangesError) {
+      console.error('Erro ao carregar trocas recentes:', exchangesError)
+      recentExchanges.value = []
+    }
 
     // Carregar matches potenciais
     await refreshMatches()
@@ -783,6 +790,10 @@ const addSkill = async () => {
       userSkills.value.push(response.data.data)
       showAddSkillModal.value = false
       
+      // Atualizar estatísticas em tempo real
+      await updateUserStats()
+      await loadWeeklyStats()
+      
       // Reset form
       newSkill.value = {
         title: '',
@@ -809,6 +820,10 @@ const deleteSkill = async (skillId: number) => {
     const response = await skillService.delete(skillId)
     if (response.data && response.data.success) {
       userSkills.value = userSkills.value.filter(skill => skill.id !== skillId)
+      
+      // Atualizar estatísticas em tempo real
+      await updateUserStats()
+      await loadWeeklyStats()
     } else {
       throw new Error('Erro ao deletar habilidade')
     }
@@ -822,16 +837,14 @@ const deleteSkill = async (skillId: number) => {
 const loadUserSkills = async () => {
   try {
     const skillsResponse = await skillService.getMySkills()
-    console.log('Skills response:', skillsResponse) // Debug
     
-    if (skillsResponse?.data?.skills) {
-      userSkills.value = skillsResponse.data.skills.map((skill: Skill) => ({
+    if (skillsResponse?.data?.success && skillsResponse.data.data) {
+      userSkills.value = skillsResponse.data.data.map((skill: Skill) => ({
         ...skill,
         views: skill.views || 0,
         is_available: skill.is_available !== false,
         category: skill.category || { id: 0, name: 'Sem categoria' }
       }))
-      console.log('Processed skills:', userSkills.value) // Debug
     } else {
       console.warn('Resposta inválida ao carregar skills:', skillsResponse.data)
       userSkills.value = []
@@ -867,6 +880,41 @@ const refreshMatches = async () => {
   }
 }
 
+// Função para atualizar estatísticas do usuário
+const updateUserStats = async () => {
+  try {
+    const userStatsResponse = await statsService.getUserStats()
+    if (userStatsResponse.data && userStatsResponse.data.data) {
+      const newStats = {
+        skills: Number(userStatsResponse.data.data.skills) || 0,
+        exchanges: Number(userStatsResponse.data.data.exchanges) || 0,
+        connections: Number(userStatsResponse.data.data.connections) || 0,
+        rating: Number(userStatsResponse.data.data.rating) || 0
+      }
+      
+      // Animar a mudança dos valores
+      const oldStats = { ...realUserStats.value }
+      realUserStats.value = newStats
+      
+      // Adicionar classe de animação se os valores mudaram
+      if (oldStats.skills !== newStats.skills || 
+          oldStats.exchanges !== newStats.exchanges || 
+          oldStats.connections !== newStats.connections || 
+          oldStats.rating !== newStats.rating) {
+        // Trigger animation
+        if (typeof document !== 'undefined') {
+          document.querySelectorAll('.stats-card').forEach(card => {
+            card.classList.add('stats-updated')
+            setTimeout(() => card.classList.remove('stats-updated'), 1000)
+          })
+        }
+      }
+    }
+  } catch (statsError) {
+    console.error('Erro ao atualizar estatísticas do usuário:', statsError)
+  }
+}
+
 // Função para carregar estatísticas semanais
 const loadWeeklyStats = async () => {
   try {
@@ -879,7 +927,6 @@ const loadWeeklyStats = async () => {
   } catch (err) {
     console.error('Erro ao carregar estatísticas semanais:', err)
   }
-
 }
 
 // Função para favoritar um match
@@ -894,8 +941,23 @@ const initiateExchange = (match: Match) => {
   router.push(`/users/${match.user_id}/profile`)
 }
 
+// Intervalo para atualização automática das estatísticas
+let statsUpdateInterval: number | null = null
+
 onMounted(() => {
   loadDashboard()
+  
+  // Atualizar estatísticas a cada 30 segundos
+  statsUpdateInterval = setInterval(async () => {
+    await updateUserStats()
+    await loadWeeklyStats()
+  }, 30000)
+})
+
+onUnmounted(() => {
+  if (statsUpdateInterval) {
+    clearInterval(statsUpdateInterval)
+  }
 })
 </script>
 
@@ -908,6 +970,17 @@ onMounted(() => {
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* Animação para atualização de estatísticas */
+.stats-updated {
+  animation: statsUpdate 0.5s ease-in-out;
+}
+
+@keyframes statsUpdate {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); background-color: rgba(59, 130, 246, 0.1); }
+  100% { transform: scale(1); }
 }
 
 /* Scrollbar customizada */

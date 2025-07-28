@@ -16,7 +16,8 @@ class CategoryController extends Controller
     {
         $categories = Category::withCount('skills')->get();
         return response()->json([
-            'categories' => $categories
+            'success' => true,
+            'data' => $categories
         ]);
     }
 

@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import HomeView from '../views/HomeView.vue'
 import LoginView from '../views/LoginView.vue'
 import DashboardView from '../views/DashboardView.vue'
@@ -101,6 +102,37 @@ const router = createRouter({
       component: ContactView,
     },
   ],
+})
+
+// Guard para rotas que requerem autenticação
+router.beforeEach(async (to, from, next) => {
+  const authStore = useAuthStore()
+  
+  // Rotas que requerem autenticação
+  const protectedRoutes = ['/dashboard', '/profile', '/chat', '/agenda']
+  
+  // Rotas que não devem ser acessadas quando autenticado
+  const publicOnlyRoutes = ['/login', '/register']
+  
+  // Se a rota requer autenticação
+  if (protectedRoutes.includes(to.path)) {
+    if (!authStore.isAuthenticated) {
+      // Redirecionar para login se não estiver autenticado
+      next('/login')
+      return
+    }
+  }
+  
+  // Se a rota é apenas para usuários não autenticados
+  if (publicOnlyRoutes.includes(to.path)) {
+    if (authStore.isAuthenticated) {
+      // Redirecionar para dashboard se já estiver autenticado
+      next('/dashboard')
+      return
+    }
+  }
+  
+  next()
 })
 
 export default router

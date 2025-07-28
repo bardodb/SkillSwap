@@ -68,7 +68,7 @@ class ExchangeController extends Controller
 
             return response()->json([
                 'success' => true,
-                'exchanges' => $exchanges
+                'data' => $exchanges
             ]);
             
         } catch (\Exception $e) {

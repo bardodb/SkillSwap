@@ -346,8 +346,8 @@ const loadStats = async () => {
     
     const response = await statsService.getStats()
     
-    if (response.success && response.data) {
-      stats.value = response.data
+    if (response.data.success && response.data.data) {
+      stats.value = response.data.data
     } else {
       throw new Error('Dados de estatísticas inválidos')
     }
@@ -364,72 +364,17 @@ const loadCategories = async () => {
   error.value = null
   
   try {
-    // Mock data while API is not available
-    categories.value = [
-      {
-        id: 1,
-        name: 'Programação',
-        description: 'Desenvolvimento web, mobile e desktop',
-        color: '#3b82f6',
-        skills_count: 25
-      },
-      {
-        id: 2,
-        name: 'Design',
-        description: 'UI/UX, Design Gráfico e Ilustração',
-        color: '#f59e0b',
-        skills_count: 18
-      },
-      {
-        id: 3,
-        name: 'Marketing',
-        description: 'Marketing Digital, SEO e Redes Sociais',
-        color: '#ef4444',
-        skills_count: 15
-      },
-      {
-        id: 4,
-        name: 'Idiomas',
-        description: 'Inglês, Espanhol, Francês e outros',
-        color: '#22c55e',
-        skills_count: 12
-      },
-      {
-        id: 5,
-        name: 'Música',
-        description: 'Instrumentos, Teoria Musical e Produção',
-        color: '#8b5cf6',
-        skills_count: 10
-      },
-      {
-        id: 6,
-        name: 'Culinária',
-        description: 'Receitas, Técnicas e Gastronomia',
-        color: '#f97316',
-        skills_count: 8
-      },
-      {
-        id: 7,
-        name: 'Negócios',
-        description: 'Empreendedorismo, Finanças e Gestão',
-        color: '#06b6d4',
-        skills_count: 14
-      },
-      {
-        id: 8,
-        name: 'Esportes',
-        description: 'Fitness, Yoga, Artes Marciais',
-        color: '#84cc16',
-        skills_count: 9
-      }
-    ]
-    
-    // Uncomment when API is ready
-    // const response = await categoryService.getAll()
-    // categories.value = response.data.categories
+    const response = await categoryService.getAll()
+    if (response.data && response.data.success) {
+      categories.value = response.data.data || []
+    } else {
+      console.warn('Resposta inválida ao carregar categorias')
+      categories.value = []
+    }
   } catch (err) {
     error.value = 'Erro ao carregar categorias'
     console.error('Erro ao carregar categorias:', err)
+    categories.value = []
   } finally {
     loading.value = false
   }
