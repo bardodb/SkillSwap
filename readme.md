@@ -14,6 +14,7 @@ docker compose up --build
 
 - **Frontend:** http://localhost:8080
 - **Backend (API):** http://localhost:8000
+- **Reverb (WebSocket):** ws://localhost:8081 (chat em tempo real)
 - **PostgreSQL:** serviço interno `db` (dados descartados ao parar os containers)
 
 Contas de demo (após o seed automático):
@@ -23,6 +24,14 @@ Contas de demo (após o seed automático):
 | joao@skillswap.com | password123 |
 | maria@skillswap.com | password123 |
 | carlos@skillswap.com | password123 |
+
+### Chat e mensagens (Reverb)
+
+- Acesse **http://localhost:8080/chat** após login.
+- Só é possível **enviar** mensagens enquanto existir uma troca entre os dois usuários com status `pending`, `accepted` ou `scheduled`; o histórico continua visível mesmo após a troca encerrar.
+- Ao solicitar uma troca (`POST /api/exchanges`), o texto do pedido vira a **primeira mensagem** da conversa.
+- O frontend usa **Laravel Echo** + **Reverb** (`VITE_REVERB_*` no build Docker); a autenticação do canal privado é `POST /broadcasting/auth` com Bearer token (CORS liberado para `http://localhost:8080`).
+- **Demo:** entre com João ou Maria — há conversa pré-seedada entre eles (troca pendente + mensagens). João também pode iniciar nova troca com Maria a partir das habilidades no app.
 
 Para encerrar e limpar: `docker compose down`
 
@@ -108,7 +117,9 @@ O frontend estará disponível em: **http://localhost:5173**
 - ✅ Models e relacionamentos (User, Skill, Category, Exchange, Message)
 - ✅ Controllers funcionais
 - ✅ Migrations e seeders
-- ✅ CORS configurado
+- ✅ CORS configurado (API + `/broadcasting/auth`, preflight `OPTIONS`)
+- ✅ Mensagens e conversas (`/api/conversations`, `/api/messages`)
+- ✅ Broadcast em tempo real (Laravel Reverb)
 
 ### ✅ Frontend (Vue.js)
 - ✅ Interface responsiva com Tailwind CSS
@@ -116,6 +127,7 @@ O frontend estará disponível em: **http://localhost:5173**
 - ✅ Autenticação integrada
 - ✅ Páginas de Login e Registro funcionais
 - ✅ Homepage com categorias dinâmicas
+- ✅ Chat em tempo real (`/chat`, Echo + Reverb)
 - ✅ Navegação e layout completos
 
 ## 📁 Estrutura do Projeto
@@ -175,8 +187,6 @@ SkillSwap/
 - [ ] Página de listagem de habilidades
 - [ ] Sistema de busca e filtros
 - [ ] Dashboard do usuário
-- [ ] Sistema de trocas
-- [ ] Chat em tempo real
 - [ ] Sistema de avaliações
 - [ ] Upload de imagens
 - [ ] Notificações

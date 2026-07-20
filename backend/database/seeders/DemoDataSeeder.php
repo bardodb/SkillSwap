@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\Skill;
 use App\Models\Category;
 use App\Models\Exchange;
+use App\Models\Message;
 use Illuminate\Support\Facades\Hash;
 
 class DemoDataSeeder extends Seeder
@@ -186,8 +187,45 @@ class DemoDataSeeder extends Seeder
             ],
         ];
 
+        $createdExchanges = [];
         foreach ($exchanges as $exchangeData) {
-            Exchange::create($exchangeData);
+            $createdExchanges[] = Exchange::create($exchangeData);
         }
+
+        // Demo chat thread: João ↔ Maria (pending troca + mensagens iniciais)
+        $joaoMariaExchange = Exchange::create([
+            'initiator_id' => 1,
+            'receiver_id' => 2,
+            'offered_skill_id' => 2,
+            'requested_skill_id' => 4,
+            'status' => Exchange::STATUS_PENDING,
+            'message' => 'Oi Maria! Podemos retomar a troca de Vue por prototipagem?',
+        ]);
+
+        Message::create([
+            'sender_id' => 1,
+            'receiver_id' => 2,
+            'exchange_id' => $joaoMariaExchange->id,
+            'content' => $joaoMariaExchange->message,
+            'is_read' => false,
+        ]);
+
+        Message::create([
+            'sender_id' => 2,
+            'receiver_id' => 1,
+            'exchange_id' => $joaoMariaExchange->id,
+            'content' => 'Claro, João! Podemos marcar essa semana.',
+            'is_read' => true,
+        ]);
+
+        // Histórico da troca concluída entre João e Maria
+        $completedJoaoMaria = $createdExchanges[0];
+        Message::create([
+            'sender_id' => 1,
+            'receiver_id' => 2,
+            'exchange_id' => $completedJoaoMaria->id,
+            'content' => $completedJoaoMaria->message,
+            'is_read' => true,
+        ]);
     }
 }

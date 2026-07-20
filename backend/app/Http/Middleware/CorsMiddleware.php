@@ -15,11 +15,18 @@ class CorsMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $response = $next($request);
+        if ($request->getMethod() === 'OPTIONS') {
+            return $this->withCorsHeaders(response('', 204));
+        }
 
+        return $this->withCorsHeaders($next($request));
+    }
+
+    private function withCorsHeaders(Response $response): Response
+    {
         $response->headers->set('Access-Control-Allow-Origin', '*');
         $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-        $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+        $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-CSRF-TOKEN, X-Socket-Id');
 
         return $response;
     }
