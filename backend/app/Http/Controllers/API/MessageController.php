@@ -243,8 +243,8 @@ class MessageController extends Controller
         if (! $allowed) {
             return response()->json([
                 'success' => false,
-                'message' => 'Forbidden',
-            ], 403);
+                'message' => 'Not found',
+            ], 404);
         }
 
         $partner = User::select('id', 'name', 'avatar')->find($partnerId);

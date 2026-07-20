@@ -147,11 +147,13 @@ class SkillController extends Controller
      */
     public function update(Request $request, Skill $skill)
     {
-        // Check if user owns this skill
-        if ($skill->user_id !== $request->user()->id) {
+        try {
+            $skill = $request->user()->skills()->whereKey($skill->id)->firstOrFail();
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
-                'message' => 'Unauthorized'
-            ], 403);
+                'success' => false,
+                'message' => 'Not found',
+            ], 404);
         }
 
         $validator = Validator::make($request->all(), [
@@ -188,11 +190,13 @@ class SkillController extends Controller
      */
     public function destroy(Skill $skill, Request $request)
     {
-        // Check if user owns this skill
-        if ($skill->user_id !== $request->user()->id) {
+        try {
+            $skill = $request->user()->skills()->whereKey($skill->id)->firstOrFail();
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
-                'message' => 'Unauthorized'
-            ], 403);
+                'success' => false,
+                'message' => 'Not found',
+            ], 404);
         }
 
         $skill->delete();
