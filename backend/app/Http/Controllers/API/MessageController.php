@@ -220,7 +220,34 @@ class MessageController extends Controller
             ], 422);
         }
 
-        $partner = User::select('id', 'name', 'avatar', 'email')->find($partnerId);
+        // #region agent log
+        $allowed = $this->messageService->canAccessConversation($user, $partnerId);
+        $payload = json_encode([
+            'sessionId' => '6d48b3',
+            'runId' => 'post-fix',
+            'hypothesisId' => 'H1-idor-open',
+            'location' => 'MessageController::conversation',
+            'message' => 'conversation access check',
+            'data' => [
+                'authUserId' => (int) $user->id,
+                'partnerId' => $partnerId,
+                'allowed' => $allowed,
+                'canMessage' => $this->messageService->canMessage($user, $partnerId),
+            ],
+            'timestamp' => (int) (microtime(true) * 1000),
+        ])."\n";
+        @file_put_contents(storage_path('logs/debug-6d48b3.log'), $payload, FILE_APPEND);
+        // #endregion
+
+        // Authorize before loading partner PII (Facebook-style: server gate, no leak on deny).
+        if (! $allowed) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Forbidden',
+            ], 403);
+        }
+
+        $partner = User::select('id', 'name', 'avatar')->find($partnerId);
         if (!$partner) {
             return response()->json([
                 'success' => false,

@@ -301,15 +301,22 @@ async function loadThread(partnerId: number) {
 
       subscribeToPartner(partnerId)
     }
-  } catch {
-    listError.value = 'Não foi possível carregar esta conversa.'
+  } catch (err: unknown) {
+    const status = (err as { response?: { status?: number; data?: { message?: string } } })?.response
+      ?.status
+    // #region agent log
+    fetch('http://127.0.0.1:7804/ingest/a52615f4-f6e4-4dac-b650-b0feb607cb3e',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6d48b3'},body:JSON.stringify({sessionId:'6d48b3',runId:'post-fix',hypothesisId:'H1-self',location:'ChatView.vue:loadThread',message:'loadThread failed',data:{partnerId,status},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    listError.value =
+      status === 422
+        ? 'Não é possível abrir uma conversa consigo mesmo.'
+        : status === 403
+          ? 'Você não tem permissão para abrir esta conversa.'
+          : 'Não foi possível carregar esta conversa.'
     activePartnerId.value = null
     activePartner.value = null
     canMessage.value = false
-    const { user: _user, ...restQuery } = route.query
-    if (_user !== undefined) {
-      await router.replace({ query: restQuery })
-    }
+    await clearUserQuery()
   } finally {
     threadLoading.value = false
   }
@@ -354,11 +361,28 @@ async function handleSend(content: string) {
   }
 }
 
+async function clearUserQuery() {
+  const { user: _user, ...restQuery } = route.query
+  if (_user !== undefined) {
+    await router.replace({ query: restQuery })
+  }
+}
+
 async function applyRouteUser() {
   const userId = parseUserQuery()
-  if (userId) {
-    await selectPartner(userId)
+  if (!userId) return
+
+  // ?user=<own id> is not IDOR — it's a self-chat deep link (Maria=2 → /chat?user=2).
+  if (userId === currentUserId.value) {
+    // #region agent log
+    fetch('http://127.0.0.1:7804/ingest/a52615f4-f6e4-4dac-b650-b0feb607cb3e',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6d48b3'},body:JSON.stringify({sessionId:'6d48b3',runId:'post-fix',hypothesisId:'H1-self',location:'ChatView.vue:applyRouteUser',message:'ignored self partner query',data:{userId,currentUserId:currentUserId.value},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    listError.value = 'Não é possível abrir uma conversa consigo mesmo.'
+    await clearUserQuery()
+    return
   }
+
+  await selectPartner(userId)
 }
 
 onMounted(async () => {
@@ -370,9 +394,13 @@ watch(
   () => route.query.user,
   async () => {
     const userId = parseUserQuery()
-    if (userId && userId !== activePartnerId.value) {
-      await selectPartner(userId)
+    if (!userId || userId === activePartnerId.value) return
+    if (userId === currentUserId.value) {
+      listError.value = 'Não é possível abrir uma conversa consigo mesmo.'
+      await clearUserQuery()
+      return
     }
+    await selectPartner(userId)
   }
 )
 

@@ -21,6 +21,31 @@ class MessageService
         return $this->latestLiveExchangeId($user, $partnerId) !== null;
     }
 
+    /**
+     * May open a thread only with a live exchange or prior message history.
+     * Prevents user-id enumeration / IDOR via GET /conversations/{id}.
+     */
+    public function canAccessConversation(User $user, int $partnerId): bool
+    {
+        if ($partnerId === (int) $user->id) {
+            return false;
+        }
+
+        if ($this->canMessage($user, $partnerId)) {
+            return true;
+        }
+
+        return Message::query()
+            ->where(function ($q) use ($user, $partnerId) {
+                $q->where(function ($inner) use ($user, $partnerId) {
+                    $inner->where('sender_id', $user->id)->where('receiver_id', $partnerId);
+                })->orWhere(function ($inner) use ($user, $partnerId) {
+                    $inner->where('sender_id', $partnerId)->where('receiver_id', $user->id);
+                });
+            })
+            ->exists();
+    }
+
     public function latestLiveExchangeId(User $user, int $partnerId): ?int
     {
         return Exchange::query()

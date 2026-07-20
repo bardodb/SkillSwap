@@ -8,12 +8,16 @@ use App\Models\Exchange;
 use App\Models\Skill;
 use App\Models\User;
 use App\Services\MessageService;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class ExchangeController extends Controller
 {
+    use AuthorizesRequests;
+
     public function __construct(
         private readonly MessageService $messageService,
     ) {}
@@ -239,7 +243,7 @@ class ExchangeController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(Request $request, string $id)
     {
         try {
             $exchange = Exchange::with([
@@ -247,7 +251,11 @@ class ExchangeController extends Controller
                 'receiver', 
                 'offeredSkill.category', 
                 'requestedSkill.category'
-            ])->findOrFail($id);
+            ])
+                ->forParticipant($request->user())
+                ->findOrFail($id);
+
+            $this->authorize('view', $exchange);
 
             return response()->json([
                 'success' => true,
@@ -257,7 +265,12 @@ class ExchangeController extends Controller
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Troca não encontrada'
+                'message' => 'Not found'
+            ], 404);
+        } catch (AuthorizationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Not found'
             ], 404);
         } catch (\Exception $e) {
             return response()->json([
@@ -289,16 +302,12 @@ class ExchangeController extends Controller
                 ], 422);
             }
 
-            $exchange = Exchange::findOrFail($id);
             $user = $request->user();
 
-            // Verificar se o usuário tem permissão para atualizar esta troca
-            if ($exchange->initiator_id !== $user->id && $exchange->receiver_id !== $user->id) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Você não tem permissão para atualizar esta troca'
-                ], 403);
-            }
+            $exchange = Exchange::forParticipant($user)
+                ->findOrFail($id);
+
+            $this->authorize('update', $exchange);
 
             $newStatus = $request->status;
 
@@ -362,7 +371,12 @@ class ExchangeController extends Controller
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Troca não encontrada'
+                'message' => 'Not found'
+            ], 404);
+        } catch (AuthorizationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Not found'
             ], 404);
         } catch (\Exception $e) {
             return response()->json([
@@ -376,11 +390,14 @@ class ExchangeController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(Request $request, string $id)
     {
         try {
-            $exchange = Exchange::findOrFail($id);
-            $user = request()->user();
+            $user = $request->user();
+
+            $exchange = Exchange::forParticipant($user)->findOrFail($id);
+
+            $this->authorize('delete', $exchange);
 
             // Verificar se o usuário tem permissão para deletar esta troca
             if ($exchange->initiator_id !== $user->id) {
@@ -408,7 +425,12 @@ class ExchangeController extends Controller
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Troca não encontrada'
+                'message' => 'Not found'
+            ], 404);
+        } catch (AuthorizationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Not found'
             ], 404);
         } catch (\Exception $e) {
             return response()->json([
