@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
@@ -45,5 +46,12 @@ class Message extends Model
     public function exchange()
     {
         return $this->belongsTo(Exchange::class);
+    }
+
+    public function scopeForParticipant(Builder $query, User $user): Builder
+    {
+        return $query->where(function ($q) use ($user) {
+            $q->where('sender_id', $user->id)->orWhere('receiver_id', $user->id);
+        });
     }
 }

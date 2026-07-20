@@ -6,11 +6,15 @@ use App\Http\Controllers\Controller;
 use App\Models\Message;
 use App\Models\User;
 use App\Services\MessageService;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class MessageController extends Controller
 {
+    use AuthorizesRequests;
+
     public function __construct(
         private readonly MessageService $messageService,
     ) {}
@@ -22,10 +26,7 @@ class MessageController extends Controller
         $user = $request->user();
 
         $messages = Message::with(['sender:id,name,avatar', 'receiver:id,name,avatar'])
-            ->where(function ($query) use ($user) {
-                $query->where('sender_id', $user->id)
-                    ->orWhere('receiver_id', $user->id);
-            })
+            ->forParticipant($user)
             ->orderBy('created_at', 'desc')
             ->limit(100)
             ->get();
@@ -76,22 +77,30 @@ class MessageController extends Controller
      */
     public function show(Request $request, string $id)
     {
-        $user = $request->user();
+        try {
+            $user = $request->user();
 
-        $message = Message::with(['sender:id,name,avatar', 'receiver:id,name,avatar'])
-            ->findOrFail($id);
+            $message = Message::with(['sender:id,name,avatar', 'receiver:id,name,avatar'])
+                ->forParticipant($user)
+                ->findOrFail($id);
 
-        if ($message->sender_id !== $user->id && $message->receiver_id !== $user->id) {
+            $this->authorize('view', $message);
+
+            return response()->json([
+                'success' => true,
+                'data' => $message,
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthorized',
-            ], 403);
+                'message' => 'Not found',
+            ], 404);
+        } catch (AuthorizationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Not found',
+            ], 404);
         }
-
-        return response()->json([
-            'success' => true,
-            'data' => $message,
-        ]);
     }
 
     /**
@@ -99,25 +108,32 @@ class MessageController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        $user = $request->user();
-        $message = Message::findOrFail($id);
+        try {
+            $user = $request->user();
+            $message = Message::forParticipant($user)->findOrFail($id);
 
-        if ($message->receiver_id !== $user->id) {
+            $this->authorize('update', $message);
+
+            $message->update([
+                'is_read' => true,
+                'read_at' => now(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => $message,
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthorized',
-            ], 403);
+                'message' => 'Not found',
+            ], 404);
+        } catch (AuthorizationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Not found',
+            ], 404);
         }
-
-        $message->update([
-            'is_read' => true,
-            'read_at' => now(),
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'data' => $message,
-        ]);
     }
 
     /**
@@ -125,22 +141,29 @@ class MessageController extends Controller
      */
     public function destroy(Request $request, string $id)
     {
-        $user = $request->user();
-        $message = Message::findOrFail($id);
+        try {
+            $user = $request->user();
+            $message = Message::forParticipant($user)->findOrFail($id);
 
-        if ($message->sender_id !== $user->id) {
+            $this->authorize('delete', $message);
+
+            $message->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Message deleted',
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthorized',
-            ], 403);
+                'message' => 'Not found',
+            ], 404);
+        } catch (AuthorizationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Not found',
+            ], 404);
         }
-
-        $message->delete();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Message deleted',
-        ]);
     }
 
     /**
