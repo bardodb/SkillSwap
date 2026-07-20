@@ -71,7 +71,7 @@ import ConversationList, {
 import MessageThread, { type ThreadMessage, type ThreadPartner } from '@/components/chat/MessageThread.vue'
 import MessageComposer from '@/components/chat/MessageComposer.vue'
 import { messageService } from '@/services/api'
-import { conversationChannelName, disconnectEcho, getEcho } from '@/lib/echo'
+import { conversationChannelName, getEcho } from '@/lib/echo'
 import { useAuthStore } from '@/stores/auth'
 import type Echo from 'laravel-echo'
 
@@ -102,7 +102,7 @@ const echoUnavailable = ref(false)
 
 let subscribedChannelName: string | null = null
 let echoChannel: ReturnType<Echo<'reverb'>['private']> | null = null
-let connectionBound = false
+let connectionBoundEcho: Echo<'reverb'> | null = null
 
 const currentUserId = computed(() => authStore.user?.id ?? 0)
 
@@ -207,11 +207,11 @@ function leaveEchoChannel() {
 }
 
 function bindEchoConnectionState() {
-  if (connectionBound) return
   const echo = getEcho()
+  if (connectionBoundEcho === echo) return
   const connection = echo.connector?.pusher?.connection
   if (!connection) return
-  connectionBound = true
+  connectionBoundEcho = echo
   connection.bind('state_change', (states: { current: string }) => {
     echoUnavailable.value = states.current === 'failed' || states.current === 'unavailable'
   })
@@ -225,7 +225,6 @@ function subscribeToPartner(partnerId: number) {
   leaveEchoChannel()
   if (!currentUserId.value) return
 
-  disconnectEcho()
   const echo = getEcho()
   bindEchoConnectionState()
 
@@ -286,8 +285,13 @@ async function loadThread(partnerId: number) {
     }
   } catch {
     listError.value = 'Não foi possível carregar esta conversa.'
+    activePartnerId.value = null
     activePartner.value = null
     canMessage.value = false
+    const { user: _user, ...restQuery } = route.query
+    if (_user !== undefined) {
+      await router.replace({ query: restQuery })
+    }
   } finally {
     threadLoading.value = false
   }
