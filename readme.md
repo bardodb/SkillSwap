@@ -4,7 +4,29 @@ Uma plataforma completa para troca de conhecimentos e habilidades entre pessoas,
 
 ## 🚀 Como Rodar o Projeto
 
-### Pré-requisitos
+### Opção rápida: Docker
+
+Com Docker e Docker Compose instalados:
+
+```bash
+docker compose up --build
+```
+
+- **Frontend:** http://localhost:8080
+- **Backend (API):** http://localhost:8000
+- **PostgreSQL:** serviço interno `db` (dados descartados ao parar os containers)
+
+Contas de demo (após o seed automático):
+
+| Email | Senha |
+|-------|-------|
+| joao@skillswap.com | password123 |
+| maria@skillswap.com | password123 |
+| carlos@skillswap.com | password123 |
+
+Para encerrar e limpar: `docker compose down`
+
+### Pré-requisitos (sem Docker)
 
 - **PHP 8.1+** com extensões SQLite, mbstring, openssl
 - **Composer** (gerenciador de dependências PHP)

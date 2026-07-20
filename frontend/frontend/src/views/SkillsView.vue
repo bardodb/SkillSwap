@@ -297,7 +297,7 @@ interface Skill {
   id: number
   name: string
   description: string
-  level: 'Iniciante' | 'Intermediário' | 'Avançado'
+  level: string
   category_name: string
   category_color: string
   instructor_name: string
@@ -371,7 +371,19 @@ const loadSkills = async () => {
   try {
     const response = await skillService.getAll()
     if (response.data && response.data.success) {
-      skills.value = response.data.data || []
+      const raw = response.data.data || []
+      // API returns title/user/category; UI expects flat name/instructor_name/category_*
+      skills.value = raw.map((s: any) => ({
+        id: s.id,
+        name: s.title ?? s.name ?? '',
+        description: s.description ?? '',
+        level: s.level ?? '',
+        category_id: s.category_id,
+        category_name: s.category?.name ?? s.category_name ?? '',
+        category_color: s.category?.color ?? s.category_color ?? '#64748b',
+        instructor_name: s.user?.name ?? s.instructor_name ?? 'Desconhecido',
+        rating: Number(s.user?.rating ?? s.rating ?? 0),
+      }))
     } else {
       console.warn('Resposta inválida ao carregar habilidades')
       skills.value = []
@@ -401,10 +413,18 @@ const getCategoryIcon = (categoryName: string): string => {
 
 const getLevelVariant = (level: string) => {
   switch (level) {
-    case 'Iniciante': return 'success'
-    case 'Intermediário': return 'warning'
-    case 'Avançado': return 'danger'
-    default: return 'primary'
+    case 'Iniciante':
+    case 'beginner':
+      return 'success'
+    case 'Intermediário':
+    case 'intermediate':
+      return 'warning'
+    case 'Avançado':
+    case 'advanced':
+    case 'expert':
+      return 'danger'
+    default:
+      return 'primary'
   }
 }
 
