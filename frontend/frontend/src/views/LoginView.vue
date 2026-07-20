@@ -25,6 +25,7 @@
             placeholder="seu@email.com"
             required
             :error="errors.email"
+            data-testid="login-email"
           >
             <template #icon-left>
               <svg class="w-5 h-5 text-secondary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -41,6 +42,7 @@
             placeholder="••••••••"
             required
             :error="errors.password"
+            data-testid="login-password"
           >
             <template #icon-left>
               <svg class="w-5 h-5 text-secondary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -100,6 +102,7 @@
             :loading="loading"
             full-width
             class="shadow-medium hover:shadow-large"
+            data-testid="login-submit"
           >
             <template #icon-left v-if="!loading">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

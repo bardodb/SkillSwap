@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col h-full min-h-0">
+  <div class="flex flex-col h-full min-h-0" data-testid="conversation-list">
     <div class="px-4 py-3 border-b border-secondary-100">
       <h2 class="text-sm font-semibold text-secondary-900">Conversas</h2>
     </div>
@@ -24,6 +24,7 @@
           type="button"
           class="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-secondary-50"
           :class="activePartnerId === item.partner.id ? 'bg-primary-50' : ''"
+          :data-testid="`conversation-item-${item.partner.id}`"
           @click="emit('select', item.partner.id)"
         >
           <div

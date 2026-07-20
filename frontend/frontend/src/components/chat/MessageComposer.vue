@@ -1,6 +1,6 @@
 <template>
-  <div class="border-t border-secondary-100 p-4 shrink-0">
-    <p v-if="disabled && disabledReason" class="text-sm text-secondary-600 mb-2">
+  <div class="border-t border-secondary-100 p-4 shrink-0" data-testid="message-composer">
+    <p v-if="disabled && disabledReason" class="text-sm text-secondary-600 mb-2" data-testid="composer-disabled-reason">
       {{ disabledReason }}
     </p>
     <form class="flex gap-2 items-end" @submit.prevent="submit">
@@ -10,6 +10,7 @@
           placeholder="Digite sua mensagem..."
           :disabled="disabled || sending"
           class="mb-0"
+          data-testid="message-input"
           @keydown.enter.exact.prevent="submit"
         />
       </div>
@@ -18,6 +19,7 @@
         variant="primary"
         :disabled="disabled || sending || !draft.trim()"
         :loading="sending"
+        data-testid="message-send"
       >
         Enviar
       </BaseButton>

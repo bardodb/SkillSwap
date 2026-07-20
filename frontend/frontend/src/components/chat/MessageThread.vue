@@ -1,8 +1,9 @@
 <template>
-  <div class="flex flex-col h-full min-h-0">
+  <div class="flex flex-col h-full min-h-0" data-testid="message-thread">
     <div
       v-if="partner"
       class="px-4 py-3 border-b border-secondary-100 flex items-center gap-3 shrink-0"
+      data-testid="thread-partner"
     >
       <div
         class="w-10 h-10 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-sm font-semibold"
@@ -45,6 +46,8 @@
         v-for="msg in messages"
         :key="msg.id"
         class="max-w-[85%] rounded-2xl px-4 py-2 text-sm break-words"
+        data-testid="chat-message"
+        :data-message-id="msg.id"
         :class="
           msg.sender_id === currentUserId
             ? 'ml-auto bg-primary-600 text-white'
