@@ -39,8 +39,8 @@ services:
       REVERB_APP_ID: skillswap
       REVERB_APP_KEY: skillswap-key
       REVERB_APP_SECRET: skillswap-secret
-      REVERB_HOST: localhost
-      REVERB_PORT: 8081
+      REVERB_HOST: reverb
+      REVERB_PORT: 8080
       REVERB_SCHEME: http
     depends_on:
       db:
