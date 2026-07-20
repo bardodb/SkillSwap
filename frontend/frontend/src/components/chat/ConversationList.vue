@@ -13,7 +13,9 @@
       class="flex-1 flex flex-col items-center justify-center p-6 text-center text-secondary-600"
     >
       <p class="font-medium text-secondary-800">Nenhuma conversa ainda</p>
-      <p class="text-sm mt-1">Inicie um chat a partir de um perfil ou troca aceita.</p>
+      <p class="text-sm mt-1">
+        Inicie um chat a partir de um perfil ou de uma troca ativa (pendente, aceita ou agendada).
+      </p>
     </div>
 
     <ul v-else class="flex-1 overflow-y-auto divide-y divide-secondary-100">

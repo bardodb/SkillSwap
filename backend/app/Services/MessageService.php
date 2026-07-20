@@ -46,7 +46,7 @@ class MessageService
 
         if (! $this->canMessage($sender, $receiverId)) {
             throw ValidationException::withMessages([
-                'receiver_id' => ['Só é possível enviar mensagens enquanto houver uma troca ativa entre vocês'],
+                'receiver_id' => ['Só é possível enviar mensagens enquanto houver uma troca ativa (pendente, aceita ou agendada) entre vocês'],
             ]);
         }
 

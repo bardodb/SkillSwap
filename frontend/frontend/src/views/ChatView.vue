@@ -33,11 +33,19 @@
             conexão voltar.
           </div>
           <div
+            v-if="subscriptionPermissionError"
+            class="bg-danger-50 border-b border-danger-200 px-4 py-3 text-sm text-danger-800"
+            role="alert"
+          >
+            {{ subscriptionPermissionError }}
+          </div>
+          <div
             v-if="activePartnerId && !canMessage"
             class="bg-danger-50 border-b border-danger-200 px-4 py-3 text-sm text-danger-800"
             role="alert"
           >
-            Você só pode enviar mensagens após uma troca aceita com este usuário.
+            Só é possível enviar mensagens enquanto houver uma troca ativa (pendente, aceita ou agendada)
+            com este usuário.
           </div>
 
           <MessageThread
@@ -99,6 +107,10 @@ const threadLoading = ref(false)
 const listError = ref<string | null>(null)
 const sending = ref(false)
 const echoUnavailable = ref(false)
+const subscriptionPermissionError = ref<string | null>(null)
+
+const activeExchangeHint =
+  'enquanto houver uma troca ativa (pendente, aceita ou agendada)'
 
 let subscribedChannelName: string | null = null
 let echoChannel: ReturnType<Echo<'reverb'>['private']> | null = null
@@ -108,7 +120,9 @@ const currentUserId = computed(() => authStore.user?.id ?? 0)
 
 const composerDisabledReason = computed(() => {
   if (!activePartnerId.value) return 'Selecione uma conversa para enviar mensagens.'
-  if (!canMessage.value) return undefined
+  if (!canMessage.value) {
+    return `Só é possível enviar mensagens ${activeExchangeHint} com este usuário.`
+  }
   return undefined
 })
 
@@ -192,6 +206,7 @@ async function loadConversations() {
 }
 
 function leaveEchoChannel() {
+  subscriptionPermissionError.value = null
   if (echoChannel) {
     echoChannel.stopListening('.message.sent')
     echoChannel = null
@@ -231,6 +246,9 @@ function subscribeToPartner(partnerId: number) {
   const channelName = conversationChannelName(currentUserId.value, partnerId)
   subscribedChannelName = channelName
   echoChannel = echo.private(channelName)
+  echoChannel.error(() => {
+    subscriptionPermissionError.value = 'Sem permissão para esta conversa'
+  })
   echoChannel.listen('.message.sent', (payload: BroadcastPayload) => {
     const msg: ThreadMessage = {
       id: payload.id,
@@ -330,7 +348,7 @@ async function handleSend(content: string) {
       })
     }
   } catch {
-    listError.value = 'Falha ao enviar mensagem. Verifique se a troca está aceita.'
+    listError.value = `Falha ao enviar mensagem. Verifique se há uma troca ativa (pendente, aceita ou agendada) com este usuário.`
   } finally {
     sending.value = false
   }
