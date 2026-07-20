@@ -5,11 +5,15 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use App\Models\Message;
 use App\Models\User;
+use App\Services\MessageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class MessageController extends Controller
 {
+    public function __construct(
+        private readonly MessageService $messageService,
+    ) {}
     /**
      * List messages for the authenticated user.
      */
@@ -52,22 +56,14 @@ class MessageController extends Controller
 
         $user = $request->user();
 
-        if ((int) $request->receiver_id === (int) $user->id) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Não é possível enviar mensagem para si mesmo',
-            ], 422);
-        }
+        $message = $this->messageService->send(
+            $user,
+            (int) $request->receiver_id,
+            $request->content,
+            $request->exchange_id ? (int) $request->exchange_id : null,
+        );
 
-        $message = Message::create([
-            'sender_id' => $user->id,
-            'receiver_id' => $request->receiver_id,
-            'exchange_id' => $request->exchange_id,
-            'content' => $request->content,
-            'is_read' => false,
-        ]);
-
-        $message->load(['sender:id,name,avatar', 'receiver:id,name,avatar']);
+        $message->load(['receiver:id,name,avatar']);
 
         return response()->json([
             'success' => true,
@@ -199,6 +195,7 @@ class MessageController extends Controller
                     'is_read' => $lastMessage->is_read,
                 ] : null,
                 'unread_count' => $unreadCount,
+                'can_message' => $this->messageService->canMessage($user, (int) $partnerId),
             ];
         })->filter()->values();
 
@@ -256,6 +253,7 @@ class MessageController extends Controller
             'data' => [
                 'partner' => $partner,
                 'messages' => $messages,
+                'can_message' => $this->messageService->canMessage($user, $partnerId),
             ],
         ]);
     }

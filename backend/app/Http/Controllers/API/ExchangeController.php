@@ -2,15 +2,21 @@
 
 namespace App\Http\Controllers\API;
 
+use App\Events\MessageSent;
 use App\Http\Controllers\Controller;
 use App\Models\Exchange;
 use App\Models\Skill;
 use App\Models\User;
+use App\Services\MessageService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class ExchangeController extends Controller
 {
+    public function __construct(
+        private readonly MessageService $messageService,
+    ) {}
     /**
      * Display a listing of the resource.
      */
@@ -163,15 +169,27 @@ class ExchangeController extends Controller
                 ], 400);
             }
 
-            // Criar a nova troca
-            $exchange = Exchange::create([
-                'initiator_id' => $initiator->id,
-                'receiver_id' => $receiverId,
-                'offered_skill_id' => $offeredSkillId,
-                'requested_skill_id' => $requestedSkillId,
-                'status' => Exchange::STATUS_PENDING,
-                'message' => $request->message,
-            ]);
+            [$exchange, $message] = DB::transaction(function () use ($initiator, $receiverId, $offeredSkillId, $requestedSkillId, $request) {
+                $exchange = Exchange::create([
+                    'initiator_id' => $initiator->id,
+                    'receiver_id' => $receiverId,
+                    'offered_skill_id' => $offeredSkillId,
+                    'requested_skill_id' => $requestedSkillId,
+                    'status' => Exchange::STATUS_PENDING,
+                    'message' => $request->message,
+                ]);
+
+                $message = $this->messageService->sendForNewExchange(
+                    $initiator,
+                    $receiverId,
+                    $exchange->id,
+                    $request->message,
+                );
+
+                return [$exchange, $message];
+            });
+
+            broadcast(new MessageSent($message->load('sender:id,name,avatar')));
 
             // Carregar relacionamentos para resposta
             $exchange->load([
@@ -203,7 +221,9 @@ class ExchangeController extends Controller
                         'id' => $exchange->requestedSkill->id,
                         'title' => $exchange->requestedSkill->title,
                         'category' => $exchange->requestedSkill->category->name
-                    ]
+                    ],
+                    'conversation_partner_id' => $receiverId,
+                    'first_message_id' => $message->id,
                 ]
             ], 201);
             
