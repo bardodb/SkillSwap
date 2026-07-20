@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authService, oauthService } from '@/services/api'
+import { disconnectEcho } from '@/lib/echo'
 
 interface User {
   id: number
@@ -109,6 +110,7 @@ export const useAuthStore = defineStore('auth', () => {
     } catch (error) {
       console.error('Erro ao fazer logout:', error)
     } finally {
+      disconnectEcho()
       user.value = null
       token.value = null
       localStorage.removeItem('token')
