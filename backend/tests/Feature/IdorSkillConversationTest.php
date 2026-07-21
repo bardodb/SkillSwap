@@ -51,4 +51,55 @@ class IdorSkillConversationTest extends TestCase
             $this->getJson("/api/conversations/{$carlos->id}")
         );
     }
+
+    public function test_guest_cannot_see_unavailable_skills_when_filtering_by_user_id(): void
+    {
+        $category = Category::create(['name' => 'T', 'description' => 't']);
+        $owner = User::factory()->create();
+        $available = Skill::create([
+            'user_id' => $owner->id,
+            'category_id' => $category->id,
+            'title' => 'Public skill',
+            'description' => 'd',
+            'level' => 'beginner',
+            'is_available' => true,
+        ]);
+        $unavailable = Skill::create([
+            'user_id' => $owner->id,
+            'category_id' => $category->id,
+            'title' => 'Draft skill',
+            'description' => 'd',
+            'level' => 'beginner',
+            'is_available' => false,
+        ]);
+
+        $response = $this->getJson("/api/skills?user_id={$owner->id}");
+
+        $response->assertOk()->assertJsonPath('success', true);
+        $ids = collect($response->json('data'))->pluck('id')->all();
+        $this->assertContains($available->id, $ids);
+        $this->assertNotContains($unavailable->id, $ids);
+    }
+
+    public function test_other_user_cannot_see_unavailable_skills_when_filtering_by_user_id(): void
+    {
+        $category = Category::create(['name' => 'T', 'description' => 't']);
+        $owner = User::factory()->create();
+        $other = User::factory()->create();
+        Skill::create([
+            'user_id' => $owner->id,
+            'category_id' => $category->id,
+            'title' => 'Draft skill',
+            'description' => 'd',
+            'level' => 'beginner',
+            'is_available' => false,
+        ]);
+
+        Sanctum::actingAs($other);
+        $response = $this->getJson("/api/skills?user_id={$owner->id}");
+
+        $response->assertOk()->assertJsonPath('success', true);
+        $ids = collect($response->json('data'))->pluck('id')->all();
+        $this->assertEmpty($ids);
+    }
 }

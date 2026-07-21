@@ -16,11 +16,9 @@ class SkillController extends Controller
     {
         $query = Skill::with(['user', 'category']);
 
-        // Filter by user_id (for user's own skills)
         if ($request->has('user_id')) {
-            $query->where('user_id', $request->user_id);
+            $query->where('user_id', $request->user_id)->where('is_available', true);
         } else {
-            // Only show available skills when not filtering by user
             $query->where('is_available', true);
         }
 

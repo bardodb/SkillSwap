@@ -2,9 +2,11 @@
 
 namespace App\Providers;
 
+use App\Models\Category;
 use App\Models\Exchange;
 use App\Models\Message;
 use App\Models\Skill;
+use App\Policies\CategoryPolicy;
 use App\Policies\ExchangePolicy;
 use App\Policies\MessagePolicy;
 use App\Policies\SkillPolicy;
@@ -26,6 +28,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Gate::policy(Category::class, CategoryPolicy::class);
         Gate::policy(Exchange::class, ExchangePolicy::class);
         Gate::policy(Message::class, MessagePolicy::class);
         Gate::policy(Skill::class, SkillPolicy::class);

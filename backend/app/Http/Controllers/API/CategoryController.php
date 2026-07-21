@@ -4,11 +4,13 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class CategoryController extends Controller
 {
+    use AuthorizesRequests;
     /**
      * Display a listing of the resource.
      */
@@ -34,6 +36,8 @@ class CategoryController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('create', Category::class);
+
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255|unique:categories',
             'description' => 'nullable|string',
@@ -83,6 +87,8 @@ class CategoryController extends Controller
      */
     public function update(Request $request, Category $category)
     {
+        $this->authorize('update', $category);
+
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|string|max:255|unique:categories,name,' . $category->id,
             'description' => 'nullable|string',
@@ -110,6 +116,8 @@ class CategoryController extends Controller
      */
     public function destroy(Category $category)
     {
+        $this->authorize('delete', $category);
+
         $category->delete();
 
         return response()->json([

@@ -50,7 +50,10 @@ class DemoDataSeeder extends Seeder
         ];
 
         foreach ($users as $userData) {
-            User::create($userData);
+            $user = User::create($userData);
+            if ($userData['email'] === 'joao@skillswap.com') {
+                $user->forceFill(['is_admin' => true])->save();
+            }
         }
 
         // Buscar categorias existentes
