@@ -25,6 +25,8 @@ Contas de demo (após o seed automático):
 | maria@skillswap.com | password123 |
 | carlos@skillswap.com | password123 |
 
+**API identifiers (breaking change):** Public JSON `id` fields for users, skills, categories, exchanges, and messages are **UUID strings**, not incremental integers. Update clients, deep links (e.g. `/chat?user={uuid}`), and request bodies (`receiver_id`, skill ids) accordingly.
+
 ### Chat e mensagens (Reverb)
 
 - Acesse **http://localhost:8080/chat** após login.
