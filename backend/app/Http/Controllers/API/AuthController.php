@@ -137,7 +137,7 @@ class AuthController extends Controller
     public function getUserProfile(Request $request, $userId)
     {
         try {
-            $user = User::with(['skills.category'])->findOrFail($userId);
+            $user = User::with(['skills.category'])->where('uuid', $userId)->firstOrFail();
             
             // Calcular estatísticas públicas do usuário
             $totalSkills = $user->skills()->where('is_available', true)->count();
@@ -150,7 +150,7 @@ class AuthController extends Controller
             
             // Informações públicas do usuário
             $publicProfile = [
-                'id' => $user->id,
+                'id' => $user->uuid,
                 'name' => $user->name,
                 'bio' => $user->bio,
                 'location' => $user->location,
@@ -165,13 +165,13 @@ class AuthController extends Controller
                 ],
                 'skills' => $user->skills->where('is_available', true)->map(function($skill) {
                     return [
-                        'id' => $skill->id,
+                        'id' => $skill->uuid,
                         'title' => $skill->title,
                         'description' => $skill->description,
                         'level' => $skill->level,
                         'tags' => $skill->tags,
                         'category' => [
-                            'id' => $skill->category->id,
+                            'id' => $skill->category->uuid,
                             'name' => $skill->category->name
                         ]
                     ];

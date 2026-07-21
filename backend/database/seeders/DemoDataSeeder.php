@@ -50,7 +50,9 @@ class DemoDataSeeder extends Seeder
         ];
 
         foreach ($users as $userData) {
+            // uuid is random v4 via HasPublicUuid::creating (Str::uuid())
             $user = User::create($userData);
+
             if ($userData['email'] === 'joao@skillswap.com') {
                 $user->forceFill(['is_admin' => true])->save();
             }

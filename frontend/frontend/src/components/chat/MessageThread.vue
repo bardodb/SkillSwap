@@ -49,7 +49,7 @@
         data-testid="chat-message"
         :data-message-id="msg.id"
         :class="
-          msg.sender_id === currentUserId
+          isOwnMessage(msg)
             ? 'ml-auto bg-primary-600 text-white'
             : 'mr-auto bg-secondary-100 text-secondary-900'
         "
@@ -57,7 +57,7 @@
         <p>{{ msg.content }}</p>
         <p
           class="text-xs mt-1 opacity-80"
-          :class="msg.sender_id === currentUserId ? 'text-primary-100' : 'text-secondary-500'"
+          :class="isOwnMessage(msg) ? 'text-primary-100' : 'text-secondary-500'"
         >
           {{ formatTime(msg.created_at) }}
         </p>
@@ -71,23 +71,24 @@ import { nextTick, ref, watch } from 'vue'
 import BaseLoading from '@/components/ui/BaseLoading.vue'
 
 export interface ThreadPartner {
-  id: number
+  id: string
   name: string
   avatar?: string | null
   email?: string
 }
 
 export interface ThreadMessage {
-  id: number
+  id: string | number
   content: string
-  sender_id: number
-  receiver_id?: number
+  sender_id: string | number
+  receiver_id?: string | number
   created_at: string
+  sender?: { id: string; name?: string; avatar?: string | null }
 }
 
 const props = defineProps<{
   messages: ThreadMessage[]
-  currentUserId: number
+  currentUserId: string
   partner: ThreadPartner | null
   loading: boolean
 }>()
@@ -108,6 +109,12 @@ function formatTime(value: string): string {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value
   return date.toLocaleString('pt-BR')
+}
+
+function isOwnMessage(msg: ThreadMessage): boolean {
+  if (!props.currentUserId) return false
+  if (msg.sender?.id) return msg.sender.id === props.currentUserId
+  return String(msg.sender_id) === props.currentUserId
 }
 
 async function scrollToBottom() {

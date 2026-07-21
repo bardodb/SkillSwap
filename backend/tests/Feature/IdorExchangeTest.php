@@ -57,7 +57,7 @@ class IdorExchangeTest extends TestCase
 
         Sanctum::actingAs($outsider);
         $this->assertNotFoundExchangeJson(
-            $this->getJson("/api/exchanges/{$exchange->id}")
+            $this->getJson("/api/exchanges/{$exchange->uuid}")
         );
     }
 
@@ -67,7 +67,7 @@ class IdorExchangeTest extends TestCase
 
         Sanctum::actingAs($outsider);
         $this->assertNotFoundExchangeJson(
-            $this->putJson("/api/exchanges/{$exchange->id}", ['status' => 'accepted'])
+            $this->putJson("/api/exchanges/{$exchange->uuid}", ['status' => 'accepted'])
         );
     }
 
@@ -77,7 +77,7 @@ class IdorExchangeTest extends TestCase
 
         Sanctum::actingAs($outsider);
         $this->assertNotFoundExchangeJson(
-            $this->deleteJson("/api/exchanges/{$exchange->id}")
+            $this->deleteJson("/api/exchanges/{$exchange->uuid}")
         );
     }
 
@@ -107,9 +107,9 @@ class IdorExchangeTest extends TestCase
 
         Sanctum::actingAs($setup['a']);
         $response = $this->postJson('/api/exchanges', [
-            'receiver_id' => $setup['b']->id,
-            'offered_skill_id' => $setup['skillB']->id,
-            'requested_skill_id' => $setup['skillB']->id,
+            'receiver_id' => $setup['b']->uuid,
+            'offered_skill_id' => $setup['skillB']->uuid,
+            'requested_skill_id' => $setup['skillB']->uuid,
             'message' => 'Tentativa inválida',
         ]);
 
@@ -133,9 +133,9 @@ class IdorExchangeTest extends TestCase
 
         Sanctum::actingAs($setup['a']);
         $response = $this->postJson('/api/exchanges', [
-            'receiver_id' => $setup['b']->id,
-            'offered_skill_id' => $setup['skillA']->id,
-            'requested_skill_id' => $skillC->id,
+            'receiver_id' => $setup['b']->uuid,
+            'offered_skill_id' => $setup['skillA']->uuid,
+            'requested_skill_id' => $skillC->uuid,
             'message' => 'Tentativa inválida',
         ]);
 
@@ -150,9 +150,9 @@ class IdorExchangeTest extends TestCase
 
         Sanctum::actingAs($setup['a']);
         $response = $this->postJson('/api/exchanges', [
-            'receiver_id' => $setup['a']->id,
-            'offered_skill_id' => $setup['skillA']->id,
-            'requested_skill_id' => $setup['skillA']->id,
+            'receiver_id' => $setup['a']->uuid,
+            'offered_skill_id' => $setup['skillA']->uuid,
+            'requested_skill_id' => $setup['skillA']->uuid,
             'message' => 'Auto troca',
         ]);
 

@@ -37,7 +37,7 @@ class IdorSkillConversationTest extends TestCase
 
         Sanctum::actingAs($other);
         $this->assertNotFoundJson(
-            $this->putJson("/api/skills/{$skill->id}", ['title' => 'Hijacked'])
+            $this->putJson("/api/skills/{$skill->uuid}", ['title' => 'Hijacked'])
         );
     }
 
@@ -48,7 +48,17 @@ class IdorSkillConversationTest extends TestCase
 
         Sanctum::actingAs($maria);
         $this->assertNotFoundJson(
-            $this->getJson("/api/conversations/{$carlos->id}")
+            $this->getJson("/api/conversations/{$carlos->uuid}")
+        );
+    }
+
+    public function test_non_uuid_conversation_partner_returns_404(): void
+    {
+        $maria = User::factory()->create(['name' => 'Maria']);
+
+        Sanctum::actingAs($maria);
+        $this->assertNotFoundJson(
+            $this->getJson('/api/conversations/3')
         );
     }
 
@@ -73,12 +83,12 @@ class IdorSkillConversationTest extends TestCase
             'is_available' => false,
         ]);
 
-        $response = $this->getJson("/api/skills?user_id={$owner->id}");
+        $response = $this->getJson("/api/skills?user_id={$owner->uuid}");
 
         $response->assertOk()->assertJsonPath('success', true);
         $ids = collect($response->json('data'))->pluck('id')->all();
-        $this->assertContains($available->id, $ids);
-        $this->assertNotContains($unavailable->id, $ids);
+        $this->assertContains($available->uuid, $ids);
+        $this->assertNotContains($unavailable->uuid, $ids);
     }
 
     public function test_other_user_cannot_see_unavailable_skills_when_filtering_by_user_id(): void
@@ -96,7 +106,7 @@ class IdorSkillConversationTest extends TestCase
         ]);
 
         Sanctum::actingAs($other);
-        $response = $this->getJson("/api/skills?user_id={$owner->id}");
+        $response = $this->getJson("/api/skills?user_id={$owner->uuid}");
 
         $response->assertOk()->assertJsonPath('success', true);
         $ids = collect($response->json('data'))->pluck('id')->all();

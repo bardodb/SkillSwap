@@ -81,10 +81,10 @@ export const oauthService = {
 // Serviços de categorias
 export const categoryService = {
   getAll: () => api.get('/categories'),
-  getById: (id: number) => api.get(`/categories/${id}`),
+  getById: (id: string) => api.get(`/categories/${id}`),
   create: (categoryData: any) => api.post('/categories', categoryData),
-  update: (id: number, categoryData: any) => api.put(`/categories/${id}`, categoryData),
-  delete: (id: number) => api.delete(`/categories/${id}`)
+  update: (id: string, categoryData: any) => api.put(`/categories/${id}`, categoryData),
+  delete: (id: string) => api.delete(`/categories/${id}`)
 }
 
 // Serviços de habilidades
@@ -92,25 +92,25 @@ export const skillService = {
   getAll: (params: Record<string, any> = {}) => api.get('/skills', { params }),
   getMySkills: () => api.get('/my-skills'),
   getMatches: () => api.get('/skill-matches'),
-  getById: (id: number) => api.get(`/skills/${id}`),
+  getById: (id: string) => api.get(`/skills/${id}`),
   create: (skillData: any) => api.post('/skills', skillData),
-  update: (id: number, skillData: any) => api.put(`/skills/${id}`, skillData),
-  delete: (id: number) => api.delete(`/skills/${id}`)
+  update: (id: string, skillData: any) => api.put(`/skills/${id}`, skillData),
+  delete: (id: string) => api.delete(`/skills/${id}`)
 }
 
 // Serviços de trocas
 export const exchangeService = {
   getAll: () => api.get('/exchanges'),
-  getById: (id: number) => api.get(`/exchanges/${id}`),
+  getById: (id: string) => api.get(`/exchanges/${id}`),
   create: (exchangeData: any) => api.post('/exchanges', exchangeData),
-  update: (id: number, exchangeData: any) => api.put(`/exchanges/${id}`, exchangeData),
-  delete: (id: number) => api.delete(`/exchanges/${id}`)
+  update: (id: string, exchangeData: any) => api.put(`/exchanges/${id}`, exchangeData),
+  delete: (id: string) => api.delete(`/exchanges/${id}`)
 }
 
 // Serviços de mensagens
 export const messageService = {
   getConversations: () => api.get('/conversations'),
-  getConversation: (userId: number) => api.get(`/conversations/${userId}`),
+  getConversation: (userId: string) => api.get(`/conversations/${userId}`),
   send: (messageData: any) => api.post('/messages', messageData),
   getAll: () => api.get('/messages')
 }

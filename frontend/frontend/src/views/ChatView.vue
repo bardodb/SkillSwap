@@ -84,14 +84,17 @@ import { useAuthStore } from '@/stores/auth'
 import type Echo from 'laravel-echo'
 
 interface BroadcastPayload {
-  id: number
+  id: string | number
   content: string
-  sender_id: number
-  receiver_id: number
-  exchange_id?: number | null
+  sender_id: string | number
+  receiver_id: string | number
+  exchange_id?: string | number | null
   created_at: string
   sender?: ConversationPartner
 }
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 const authStore = useAuthStore()
 const route = useRoute()
@@ -99,7 +102,7 @@ const router = useRouter()
 
 const conversations = ref<ConversationListItem[]>([])
 const messages = ref<ThreadMessage[]>([])
-const activePartnerId = ref<number | null>(null)
+const activePartnerId = ref<string | null>(null)
 const activePartner = ref<ThreadPartner | null>(null)
 const canMessage = ref(true)
 const listLoading = ref(true)
@@ -116,7 +119,7 @@ let subscribedChannelName: string | null = null
 let echoChannel: ReturnType<Echo<'reverb'>['private']> | null = null
 let connectionBoundEcho: Echo<'reverb'> | null = null
 
-const currentUserId = computed(() => authStore.user?.id ?? 0)
+const currentUserId = computed(() => authStore.user?.id ?? '')
 
 const composerDisabledReason = computed(() => {
   if (!activePartnerId.value) return 'Selecione uma conversa para enviar mensagens.'
@@ -126,12 +129,51 @@ const composerDisabledReason = computed(() => {
   return undefined
 })
 
-function parseUserQuery(): number | null {
+function parseUserQuery(): string | null {
   const raw = route.query.user
   const value = Array.isArray(raw) ? raw[0] : raw
-  if (!value) return null
-  const id = Number(value)
-  return Number.isFinite(id) && id > 0 ? id : null
+  if (!value || !UUID_RE.test(String(value))) return null
+  return String(value)
+}
+
+function messageSenderUuid(msg: ThreadMessage): string {
+  if (msg.sender?.id) return msg.sender.id
+  return String(msg.sender_id)
+}
+
+function normalizeThreadMessage(raw: Record<string, unknown>): ThreadMessage {
+  const sender = raw.sender as ThreadMessage['sender']
+  return {
+    id: raw.id as string | number,
+    content: String(raw.content ?? ''),
+    sender_id: sender?.id ?? (raw.sender_id as string | number),
+    receiver_id: raw.receiver_id as string | number | undefined,
+    created_at: String(raw.created_at ?? ''),
+    sender,
+  }
+}
+
+function echoUserIdsFromMessages(list: ThreadMessage[]): [number, number] | null {
+  for (const msg of list) {
+    const rawSender = msg.sender_id
+    const rawReceiver = msg.receiver_id
+    if (typeof rawSender === 'number' && typeof rawReceiver === 'number') {
+      return [rawSender, rawReceiver]
+    }
+  }
+  return null
+}
+
+function partnerUuidFromPayload(payload: BroadcastPayload): string | null {
+  if (payload.sender?.id && payload.sender.id !== currentUserId.value) {
+    return payload.sender.id
+  }
+  return activePartnerId.value
+}
+
+function isFromCurrentUser(senderId: string | number, sender?: ConversationPartner): boolean {
+  if (sender?.id) return sender.id === currentUserId.value
+  return String(senderId) === currentUserId.value
 }
 
 function upsertMessage(message: ThreadMessage) {
@@ -140,20 +182,20 @@ function upsertMessage(message: ThreadMessage) {
 }
 
 function updateConversationPreview(payload: BroadcastPayload) {
-  const partnerId =
-    payload.sender_id === currentUserId.value ? payload.receiver_id : payload.sender_id
+  const partnerId = partnerUuidFromPayload(payload)
+  if (!partnerId) return
   const idx = conversations.value.findIndex((c) => c.partner.id === partnerId)
   const preview = {
-    id: payload.id,
+    id: String(payload.id),
     content: payload.content,
-    sender_id: payload.sender_id,
+    sender_id: payload.sender?.id ?? payload.sender_id,
     created_at: payload.created_at,
-    is_read: payload.sender_id === currentUserId.value,
+    is_read: isFromCurrentUser(payload.sender_id, payload.sender),
   }
   if (idx >= 0) {
     const item = conversations.value[idx]
     const unread =
-      payload.sender_id !== currentUserId.value && activePartnerId.value !== partnerId
+      !isFromCurrentUser(payload.sender_id, payload.sender) && activePartnerId.value !== partnerId
         ? item.unread_count + 1
         : activePartnerId.value === partnerId
           ? 0
@@ -165,7 +207,7 @@ function updateConversationPreview(payload: BroadcastPayload) {
     }
   } else if (payload.sender) {
     const partner =
-      payload.sender_id === currentUserId.value
+      isFromCurrentUser(payload.sender_id, payload.sender)
         ? conversations.value.find((c) => c.partner.id === partnerId)?.partner ?? {
             id: partnerId,
             name: 'Usuário',
@@ -174,7 +216,7 @@ function updateConversationPreview(payload: BroadcastPayload) {
     conversations.value.unshift({
       partner,
       last_message: preview,
-      unread_count: payload.sender_id === currentUserId.value ? 0 : 1,
+      unread_count: isFromCurrentUser(payload.sender_id, payload.sender) ? 0 : 1,
       can_message: true,
     })
   }
@@ -236,14 +278,17 @@ function bindEchoConnectionState() {
   }
 }
 
-function subscribeToPartner(partnerId: number) {
+function subscribeToPartner(partnerId: string, threadMessages: ThreadMessage[]) {
   leaveEchoChannel()
   if (!currentUserId.value) return
+
+  const echoIds = echoUserIdsFromMessages(threadMessages)
+  if (!echoIds) return
 
   const echo = getEcho()
   bindEchoConnectionState()
 
-  const channelName = conversationChannelName(currentUserId.value, partnerId)
+  const channelName = conversationChannelName(echoIds[0], echoIds[1])
   subscribedChannelName = channelName
   echoChannel = echo.private(channelName)
   echoChannel.error(() => {
@@ -253,21 +298,22 @@ function subscribeToPartner(partnerId: number) {
     const msg: ThreadMessage = {
       id: payload.id,
       content: payload.content,
-      sender_id: payload.sender_id,
+      sender_id: payload.sender?.id ?? payload.sender_id,
       receiver_id: payload.receiver_id,
       created_at: payload.created_at,
+      sender: payload.sender,
     }
     if (activePartnerId.value === partnerId) {
       upsertMessage(msg)
     }
     updateConversationPreview(payload)
-    if (payload.sender_id !== currentUserId.value && activePartnerId.value !== partnerId) {
+    if (!isFromCurrentUser(payload.sender_id, payload.sender) && activePartnerId.value !== partnerId) {
       void loadConversations()
     }
   })
 }
 
-async function loadThread(partnerId: number) {
+async function loadThread(partnerId: string) {
   threadLoading.value = true
   messages.value = []
   try {
@@ -275,7 +321,7 @@ async function loadThread(partnerId: number) {
     if (response.data?.success) {
       const data = response.data.data
       activePartner.value = data.partner
-      messages.value = data.messages ?? []
+      messages.value = (data.messages ?? []).map((m: Record<string, unknown>) => normalizeThreadMessage(m))
       canMessage.value = data.can_message ?? false
 
       const existing = conversations.value.find((c) => c.partner.id === partnerId)
@@ -287,7 +333,7 @@ async function loadThread(partnerId: number) {
           partner: data.partner,
           last_message: messages.value.length
             ? {
-                id: messages.value[messages.value.length - 1].id,
+                id: String(messages.value[messages.value.length - 1].id),
                 content: messages.value[messages.value.length - 1].content,
                 sender_id: messages.value[messages.value.length - 1].sender_id,
                 created_at: messages.value[messages.value.length - 1].created_at,
@@ -299,14 +345,11 @@ async function loadThread(partnerId: number) {
         })
       }
 
-      subscribeToPartner(partnerId)
+      subscribeToPartner(partnerId, messages.value)
     }
   } catch (err: unknown) {
     const status = (err as { response?: { status?: number; data?: { message?: string } } })?.response
       ?.status
-    // #region agent log
-    fetch('http://127.0.0.1:7804/ingest/a52615f4-f6e4-4dac-b650-b0feb607cb3e',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6d48b3'},body:JSON.stringify({sessionId:'6d48b3',runId:'post-fix',hypothesisId:'H1-self',location:'ChatView.vue:loadThread',message:'loadThread failed',data:{partnerId,status},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     listError.value =
       status === 422
         ? 'Não é possível abrir uma conversa consigo mesmo.'
@@ -322,12 +365,12 @@ async function loadThread(partnerId: number) {
   }
 }
 
-async function selectPartner(partnerId: number) {
+async function selectPartner(partnerId: string) {
   if (activePartnerId.value === partnerId) return
   activePartnerId.value = partnerId
   const queryUser = parseUserQuery()
   if (queryUser !== partnerId) {
-    await router.replace({ query: { ...route.query, user: String(partnerId) } })
+    await router.replace({ query: { ...route.query, user: partnerId } })
   }
   await loadThread(partnerId)
 }
@@ -346,7 +389,7 @@ async function handleSend(content: string) {
       updateConversationPreview({
         id: msg.id,
         content: msg.content,
-        sender_id: msg.sender_id,
+        sender_id: messageSenderUuid(msg),
         receiver_id: activePartnerId.value,
         created_at: msg.created_at,
         sender: authStore.user
@@ -369,14 +412,19 @@ async function clearUserQuery() {
 }
 
 async function applyRouteUser() {
+  const raw = route.query.user
+  const rawValue = Array.isArray(raw) ? raw[0] : raw
   const userId = parseUserQuery()
-  if (!userId) return
+  if (!userId) {
+    // Invalid/legacy ?user= (e.g. numeric id) → strip query and stay on inbox list.
+    if (rawValue !== undefined && rawValue !== null && String(rawValue) !== '') {
+      await clearUserQuery()
+    }
+    return
+  }
 
-  // ?user=<own id> is not IDOR — it's a self-chat deep link (Maria=2 → /chat?user=2).
+  // ?user=<own uuid> is a self-chat deep link — reject non-UUID and self partner.
   if (userId === currentUserId.value) {
-    // #region agent log
-    fetch('http://127.0.0.1:7804/ingest/a52615f4-f6e4-4dac-b650-b0feb607cb3e',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6d48b3'},body:JSON.stringify({sessionId:'6d48b3',runId:'post-fix',hypothesisId:'H1-self',location:'ChatView.vue:applyRouteUser',message:'ignored self partner query',data:{userId,currentUserId:currentUserId.value},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     listError.value = 'Não é possível abrir uma conversa consigo mesmo.'
     await clearUserQuery()
     return
@@ -393,8 +441,16 @@ onMounted(async () => {
 watch(
   () => route.query.user,
   async () => {
+    const raw = route.query.user
+    const rawValue = Array.isArray(raw) ? raw[0] : raw
     const userId = parseUserQuery()
-    if (!userId || userId === activePartnerId.value) return
+    if (!userId) {
+      if (rawValue !== undefined && rawValue !== null && String(rawValue) !== '') {
+        await clearUserQuery()
+      }
+      return
+    }
+    if (userId === activePartnerId.value) return
     if (userId === currentUserId.value) {
       listError.value = 'Não é possível abrir uma conversa consigo mesmo.'
       await clearUserQuery()

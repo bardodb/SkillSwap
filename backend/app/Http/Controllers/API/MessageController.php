@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use App\Models\Exchange;
 use App\Models\Message;
 use App\Models\User;
 use App\Services\MessageService;
@@ -25,7 +26,7 @@ class MessageController extends Controller
     {
         $user = $request->user();
 
-        $messages = Message::with(['sender:id,name,avatar', 'receiver:id,name,avatar'])
+        $messages = Message::with(['sender:id,uuid,name,avatar', 'receiver:id,uuid,name,avatar'])
             ->forParticipant($user)
             ->orderBy('created_at', 'desc')
             ->limit(100)
@@ -43,9 +44,9 @@ class MessageController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'receiver_id' => 'required|exists:users,id',
+            'receiver_id' => 'required|exists:users,uuid',
             'content' => 'required|string|max:5000',
-            'exchange_id' => 'nullable|exists:exchanges,id',
+            'exchange_id' => 'nullable|exists:exchanges,uuid',
         ]);
 
         if ($validator->fails()) {
@@ -57,14 +58,21 @@ class MessageController extends Controller
 
         $user = $request->user();
 
+        $receiver = User::where('uuid', $request->receiver_id)->firstOrFail();
+        $exchangeId = null;
+        if ($request->exchange_id) {
+            $exchange = Exchange::where('uuid', $request->exchange_id)->firstOrFail();
+            $exchangeId = $exchange->id;
+        }
+
         $message = $this->messageService->send(
             $user,
-            (int) $request->receiver_id,
+            (int) $receiver->id,
             $request->content,
-            $request->exchange_id ? (int) $request->exchange_id : null,
+            $exchangeId,
         );
 
-        $message->load(['receiver:id,name,avatar']);
+        $message->load(['receiver:id,uuid,name,avatar']);
 
         return response()->json([
             'success' => true,
@@ -80,9 +88,10 @@ class MessageController extends Controller
         try {
             $user = $request->user();
 
-            $message = Message::with(['sender:id,name,avatar', 'receiver:id,name,avatar'])
+            $message = Message::with(['sender:id,uuid,name,avatar', 'receiver:id,uuid,name,avatar'])
                 ->forParticipant($user)
-                ->findOrFail($id);
+                ->where('uuid', $id)
+                ->firstOrFail();
 
             $this->authorize('view', $message);
 
@@ -110,7 +119,7 @@ class MessageController extends Controller
     {
         try {
             $user = $request->user();
-            $message = Message::forParticipant($user)->findOrFail($id);
+            $message = Message::forParticipant($user)->where('uuid', $id)->firstOrFail();
 
             $this->authorize('update', $message);
 
@@ -143,7 +152,7 @@ class MessageController extends Controller
     {
         try {
             $user = $request->user();
-            $message = Message::forParticipant($user)->findOrFail($id);
+            $message = Message::forParticipant($user)->where('uuid', $id)->firstOrFail();
 
             $this->authorize('delete', $message);
 
@@ -183,7 +192,7 @@ class MessageController extends Controller
             ->values();
 
         $conversations = $partnerIds->map(function ($partnerId) use ($user) {
-            $partner = User::select('id', 'name', 'avatar', 'email')->find($partnerId);
+            $partner = User::select('id', 'uuid', 'name', 'avatar', 'email')->find($partnerId);
             if (!$partner) {
                 return null;
             }
@@ -205,13 +214,13 @@ class MessageController extends Controller
 
             return [
                 'partner' => [
-                    'id' => $partner->id,
+                    'id' => $partner->uuid,
                     'name' => $partner->name,
                     'avatar' => $partner->avatar,
                     'email' => $partner->email,
                 ],
                 'last_message' => $lastMessage ? [
-                    'id' => $lastMessage->id,
+                    'id' => $lastMessage->uuid,
                     'content' => $lastMessage->content,
                     'sender_id' => $lastMessage->sender_id,
                     'created_at' => $lastMessage->created_at,
@@ -234,43 +243,40 @@ class MessageController extends Controller
     public function conversation(Request $request, string $userId)
     {
         $user = $request->user();
-        $partnerId = (int) $userId;
 
-        if ($partnerId === (int) $user->id) {
+        if ($userId === $user->uuid) {
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid conversation partner',
             ], 422);
         }
 
-        // #region agent log
-        $allowed = $this->messageService->canAccessConversation($user, $partnerId);
-        $payload = json_encode([
-            'sessionId' => '6d48b3',
-            'runId' => 'post-fix',
-            'hypothesisId' => 'H1-idor-open',
-            'location' => 'MessageController::conversation',
-            'message' => 'conversation access check',
-            'data' => [
-                'authUserId' => (int) $user->id,
-                'partnerId' => $partnerId,
-                'allowed' => $allowed,
-                'canMessage' => $this->messageService->canMessage($user, $partnerId),
-            ],
-            'timestamp' => (int) (microtime(true) * 1000),
-        ])."\n";
-        @file_put_contents(storage_path('logs/debug-6d48b3.log'), $payload, FILE_APPEND);
-        // #endregion
-
-        // Authorize before loading partner PII (Facebook-style: server gate, no leak on deny).
-        if (! $allowed) {
+        if (! User::isValidPublicUuid($userId)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Not found',
             ], 404);
         }
 
-        $partner = User::select('id', 'name', 'avatar')->find($partnerId);
+        $partner = User::where('uuid', $userId)->first();
+        if (! $partner) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Not found',
+            ], 404);
+        }
+
+        $partnerId = (int) $partner->id;
+
+        // Authorize before loading partner PII (Facebook-style: server gate, no leak on deny).
+        if (! $this->messageService->canAccessConversation($user, $partnerId)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Not found',
+            ], 404);
+        }
+
+        $partner = User::select('id', 'uuid', 'name', 'avatar')->find($partnerId);
         if (!$partner) {
             return response()->json([
                 'success' => false,
@@ -278,7 +284,7 @@ class MessageController extends Controller
             ], 404);
         }
 
-        $messages = Message::with(['sender:id,name,avatar', 'receiver:id,name,avatar'])
+        $messages = Message::with(['sender:id,uuid,name,avatar', 'receiver:id,uuid,name,avatar'])
             ->where(function ($q) use ($user, $partnerId) {
                 $q->where(function ($inner) use ($user, $partnerId) {
                     $inner->where('sender_id', $user->id)->where('receiver_id', $partnerId);
@@ -301,7 +307,11 @@ class MessageController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
-                'partner' => $partner,
+                'partner' => [
+                    'id' => $partner->uuid,
+                    'name' => $partner->name,
+                    'avatar' => $partner->avatar,
+                ],
                 'messages' => $messages,
                 'can_message' => $this->messageService->canMessage($user, $partnerId),
             ],

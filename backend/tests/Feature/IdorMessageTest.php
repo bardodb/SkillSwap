@@ -38,7 +38,7 @@ class IdorMessageTest extends TestCase
         $message = $this->createMessageBetween($alice, $bob);
 
         Sanctum::actingAs($carol);
-        $this->assertNotFoundJson($this->getJson("/api/messages/{$message->id}"));
+        $this->assertNotFoundJson($this->getJson("/api/messages/{$message->uuid}"));
     }
 
     public function test_user_cannot_update_message_between_others(): void
@@ -49,7 +49,7 @@ class IdorMessageTest extends TestCase
         $message = $this->createMessageBetween($alice, $bob);
 
         Sanctum::actingAs($carol);
-        $this->assertNotFoundJson($this->putJson("/api/messages/{$message->id}"));
+        $this->assertNotFoundJson($this->putJson("/api/messages/{$message->uuid}"));
     }
 
     public function test_user_cannot_delete_message_between_others(): void
@@ -60,6 +60,6 @@ class IdorMessageTest extends TestCase
         $message = $this->createMessageBetween($alice, $bob);
 
         Sanctum::actingAs($carol);
-        $this->assertNotFoundJson($this->deleteJson("/api/messages/{$message->id}"));
+        $this->assertNotFoundJson($this->deleteJson("/api/messages/{$message->uuid}"));
     }
 }

@@ -6,7 +6,7 @@ declare global {
   namespace Cypress {
     interface Chainable {
       loginUi(user: DemoUser): Chainable<void>
-      loginApi(user: DemoUser): Chainable<{ token: string; user: { id: number; name: string; email: string } }>
+      loginApi(user: DemoUser): Chainable<{ token: string; user: { id: string; name: string; email: string } }>
       apiRequest(
         method: string,
         path: string,

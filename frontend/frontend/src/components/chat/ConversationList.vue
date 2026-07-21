@@ -56,7 +56,7 @@ import BaseBadge from '@/components/ui/BaseBadge.vue'
 import BaseLoading from '@/components/ui/BaseLoading.vue'
 
 export interface ConversationPartner {
-  id: number
+  id: string
   name: string
   avatar?: string | null
   email?: string
@@ -65,9 +65,9 @@ export interface ConversationPartner {
 export interface ConversationListItem {
   partner: ConversationPartner
   last_message: {
-    id: number
+    id: string
     content: string
-    sender_id: number
+    sender_id: string | number
     created_at: string
     is_read: boolean
   } | null
@@ -77,12 +77,12 @@ export interface ConversationListItem {
 
 defineProps<{
   conversations: ConversationListItem[]
-  activePartnerId: number | null
+  activePartnerId: string | null
   loading: boolean
 }>()
 
 const emit = defineEmits<{
-  select: [partnerId: number]
+  select: [partnerId: string]
 }>()
 
 function initials(name: string): string {

@@ -181,7 +181,7 @@
               </label>
               <div class="space-y-2 max-h-48 overflow-y-auto">
                 <div 
-                  v-for="skill in userProfile.skills" 
+                  v-for="skill in userProfile?.skills ?? []" 
                   :key="skill.id"
                   :class="{
                     'border-primary-500 bg-primary-50': exchangeForm.requested_skill_id === skill.id,
@@ -244,10 +244,10 @@ import { useRoute, useRouter } from 'vue-router'
 import BaseLoading from '@/components/ui/BaseLoading.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseBadge from '@/components/ui/BaseBadge.vue'
-import { authService, skillService, exchangeService } from '@/services/api'
+import { authService, skillService, exchangeService, statsService } from '@/services/api'
 
 interface UserProfile {
-  id: number
+  id: string
   name: string
   bio?: string
   location?: string
@@ -264,13 +264,13 @@ interface UserProfile {
 }
 
 interface Skill {
-  id: number
+  id: string
   title: string
   description: string
   level: string
   tags?: string[]
   category: {
-    id: number
+    id: string
     name: string
   }
 }
@@ -288,8 +288,8 @@ const mySkills = ref<Skill[]>([])
 const showExchangeModal = ref(false)
 const submittingExchange = ref(false)
 const exchangeForm = ref({
-  offered_skill_id: null as number | null,
-  requested_skill_id: null as number | null,
+  offered_skill_id: null as string | null,
+  requested_skill_id: null as string | null,
   message: ''
 })
 
@@ -328,14 +328,14 @@ const getLevelText = (level: string): string => {
   return levels[level] || level
 }
 
-const getLevelVariant = (level: string): string => {
+const getLevelVariant = (level: string): 'primary' | 'secondary' | 'success' | 'warning' => {
   const variants: { [key: string]: string } = {
     'beginner': 'secondary',
     'intermediate': 'warning', 
     'advanced': 'primary',
     'expert': 'success'
   }
-  return variants[level] || 'secondary'
+  return (variants[level] || 'secondary') as 'primary' | 'secondary' | 'success' | 'warning'
 }
 
 // Funções principais

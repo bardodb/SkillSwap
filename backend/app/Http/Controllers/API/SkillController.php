@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use App\Models\Category;
 use App\Models\Skill;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -16,15 +18,41 @@ class SkillController extends Controller
     {
         $query = Skill::with(['user', 'category']);
 
-        if ($request->has('user_id')) {
-            $query->where('user_id', $request->user_id)->where('is_available', true);
-        } else {
-            $query->where('is_available', true);
+        $query->where('is_available', true);
+
+        if ($request->filled('user_id')) {
+            $ownerId = $this->resolvePublicUserId($request->input('user_id'));
+            if ($ownerId === null) {
+                return response()->json([
+                    'success' => true,
+                    'data' => [],
+                    'pagination' => [
+                        'current_page' => 1,
+                        'last_page' => 1,
+                        'per_page' => 12,
+                        'total' => 0,
+                    ],
+                ]);
+            }
+            $query->where('user_id', $ownerId);
         }
 
-        // Filter by category
-        if ($request->has('category_id')) {
-            $query->where('category_id', $request->category_id);
+        // Filter by category (accepts public UUID or legacy integer)
+        if ($request->filled('category_id')) {
+            $categoryId = $this->resolvePublicCategoryId($request->input('category_id'));
+            if ($categoryId === null) {
+                return response()->json([
+                    'success' => true,
+                    'data' => [],
+                    'pagination' => [
+                        'current_page' => 1,
+                        'last_page' => 1,
+                        'per_page' => 12,
+                        'total' => 0,
+                    ],
+                ]);
+            }
+            $query->where('category_id', $categoryId);
         }
 
         // Filter by level
@@ -243,11 +271,11 @@ class SkillController extends Controller
             ->get()
             ->map(function($skill) {
                 return [
-                    'id' => $skill->id,
+                    'id' => $skill->uuid,
                     'skill_title' => $skill->title,
                     'skill_description' => $skill->description,
                     'skill_level' => $skill->level,
-                    'user_id' => $skill->user->id,
+                    'user_id' => $skill->user->uuid,
                     'user_name' => $skill->user->name,
                     'user_rating' => $skill->user->rating ?? 0,
                     'user_location' => $skill->user->location ?? 'Não informado',
@@ -260,5 +288,35 @@ class SkillController extends Controller
             'success' => true,
             'data' => $matches
         ]);
+    }
+
+    private function resolvePublicUserId(mixed $value): ?int
+    {
+        if (User::isValidPublicUuid($value)) {
+            $id = User::where('uuid', $value)->value('id');
+
+            return $id !== null ? (int) $id : null;
+        }
+
+        if (is_numeric($value)) {
+            return (int) $value;
+        }
+
+        return null;
+    }
+
+    private function resolvePublicCategoryId(mixed $value): ?int
+    {
+        if (Category::isValidPublicUuid($value)) {
+            $id = Category::where('uuid', $value)->value('id');
+
+            return $id !== null ? (int) $id : null;
+        }
+
+        if (is_numeric($value)) {
+            return (int) $value;
+        }
+
+        return null;
     }
 }

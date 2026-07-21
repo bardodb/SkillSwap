@@ -87,7 +87,7 @@ class MessageService
 
         broadcast(new MessageSent($message));
 
-        return $message->load('sender:id,name,avatar');
+        return $message->load('sender:id,uuid,name,avatar');
     }
 
     public function sendForNewExchange(User $sender, int $receiverId, int $exchangeId, string $content): Message

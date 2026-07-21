@@ -56,23 +56,26 @@ class MessagingTest extends TestCase
         Sanctum::actingAs($setup['initiator']);
 
         $response = $this->postJson('/api/exchanges', [
-            'receiver_id' => $setup['receiver']->id,
-            'offered_skill_id' => $setup['offeredSkill']->id,
-            'requested_skill_id' => $setup['requestedSkill']->id,
+            'receiver_id' => $setup['receiver']->uuid,
+            'offered_skill_id' => $setup['offeredSkill']->uuid,
+            'requested_skill_id' => $setup['requestedSkill']->uuid,
             'message' => 'Olá, vamos trocar?',
         ]);
 
         $response->assertCreated()
             ->assertJsonPath('success', true)
-            ->assertJsonPath('exchange.first_message_id', fn ($id) => $id > 0)
-            ->assertJsonPath('exchange.conversation_partner_id', $setup['receiver']->id);
+            ->assertJsonPath('exchange.first_message_id', fn ($id) => is_string($id) && strlen($id) === 36)
+            ->assertJsonPath('exchange.conversation_partner_id', $setup['receiver']->uuid);
 
-        $exchangeId = $response->json('exchange.id');
-        $firstMessageId = $response->json('exchange.first_message_id');
+        $exchangeUuid = $response->json('exchange.id');
+        $firstMessageUuid = $response->json('exchange.first_message_id');
+
+        $exchange = Exchange::where('uuid', $exchangeUuid)->firstOrFail();
+        $firstMessage = Message::where('uuid', $firstMessageUuid)->firstOrFail();
 
         $this->assertDatabaseHas('messages', [
-            'id' => $firstMessageId,
-            'exchange_id' => $exchangeId,
+            'id' => $firstMessage->id,
+            'exchange_id' => $exchange->id,
             'sender_id' => $setup['initiator']->id,
             'receiver_id' => $setup['receiver']->id,
             'content' => 'Olá, vamos trocar?',
@@ -112,7 +115,7 @@ class MessagingTest extends TestCase
         Sanctum::actingAs($setup['initiator']);
 
         $response = $this->postJson('/api/messages', [
-            'receiver_id' => $setup['receiver']->id,
+            'receiver_id' => $setup['receiver']->uuid,
             'content' => 'Nova mensagem',
         ]);
 

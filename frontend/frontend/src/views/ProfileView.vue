@@ -405,7 +405,7 @@ import BaseLoading from '@/components/ui/BaseLoading.vue'
 import BaseInput from '@/components/ui/BaseInput.vue'
 
 interface User {
-  id: number
+  id: string
   name: string
   email: string
   bio?: string
@@ -415,25 +415,25 @@ interface User {
 }
 
 interface Skill {
-  id: number
+  id: string
   title: string
   description: string
   level: string
-  category_id: number
+  category_id: string
   category?: {
-    id: number
+    id: string
     name: string
   }
   views?: number
 }
 
 interface Category {
-  id: number
+  id: string
   name: string
 }
 
 interface Exchange {
-  id: number
+  id: string
   partnerName: string
   skillExchanged: string
   status: string
@@ -441,7 +441,7 @@ interface Exchange {
 }
 
 interface Match {
-  id: number
+  id: string
   name: string
   skillTitle: string
   rating: number
@@ -483,7 +483,7 @@ const newSkill = ref({
   title: '',
   description: '',
   level: '',
-  category_id: null as number | null
+  category_id: null as string | null
 })
 
 // Estatísticas computadas
@@ -745,7 +745,7 @@ const addSkill = async () => {
 }
 
 // Função para deletar habilidade
-const deleteSkill = async (skillId: number) => {
+const deleteSkill = async (skillId: string) => {
   if (!confirm('Tem certeza que deseja excluir esta habilidade?')) return
   
   try {
@@ -765,7 +765,7 @@ const deleteSkill = async (skillId: number) => {
 }
 
 // Função para visualizar perfil de um match
-const viewMatchProfile = (matchId: number) => {
+const viewMatchProfile = (matchId: string) => {
   router.push(`/users/${matchId}/profile`)
 }
 

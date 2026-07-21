@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasPublicUuid;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Exchange extends Model
 {
-    use HasFactory;
+    use HasFactory, HasPublicUuid;
 
     protected $fillable = [
         'initiator_id',

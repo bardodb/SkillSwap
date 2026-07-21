@@ -31,7 +31,7 @@ class IdorCategoryAdminTest extends TestCase
 
         Sanctum::actingAs($user);
 
-        $this->putJson("/api/categories/{$category->id}", [
+        $this->putJson("/api/categories/{$category->uuid}", [
             'name' => 'Hijacked',
         ])->assertForbidden();
     }
@@ -43,7 +43,7 @@ class IdorCategoryAdminTest extends TestCase
 
         Sanctum::actingAs($user);
 
-        $this->deleteJson("/api/categories/{$category->id}")
+        $this->deleteJson("/api/categories/{$category->uuid}")
             ->assertForbidden();
     }
 

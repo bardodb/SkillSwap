@@ -520,7 +520,7 @@ import BaseLoading from '@/components/ui/BaseLoading.vue'
 import BaseInput from '@/components/ui/BaseInput.vue'
 
 interface User {
-  id: number
+  id: string
   name: string
   email: string
   bio?: string
@@ -530,13 +530,13 @@ interface User {
 }
 
 interface Skill {
-  id: number
+  id: string
   title: string
   description: string
   level: string
-  category_id: number
+  category_id: string
   category?: {
-    id: number
+    id: string
     name: string
   }
   views?: number
@@ -548,12 +548,12 @@ interface Skill {
 }
 
 interface Category {
-  id: number
+  id: string
   name: string
 }
 
 interface Exchange {
-  id: number
+  id: string
   partnerName: string
   skillExchanged: string
   status: string
@@ -561,11 +561,11 @@ interface Exchange {
 }
 
 interface Match {
-  id: number
+  id: string
   skill_title: string
   skill_description: string
   skill_level: string
-  user_id: number
+  user_id: string
   user_name: string
   user_rating: number
   user_location: string
@@ -608,7 +608,7 @@ const newSkill = ref({
   title: '',
   description: '',
   level: '',
-  category_id: null as number | null
+  category_id: null as string | null
 })
 
 // Estatísticas computadas
@@ -813,7 +813,7 @@ const addSkill = async () => {
 }
 
 // Função para deletar habilidade
-const deleteSkill = async (skillId: number) => {
+const deleteSkill = async (skillId: string) => {
   if (!confirm('Tem certeza que deseja excluir esta habilidade?')) return
   
   try {
@@ -843,7 +843,7 @@ const loadUserSkills = async () => {
         ...skill,
         views: skill.views || 0,
         is_available: skill.is_available !== false,
-        category: skill.category || { id: 0, name: 'Sem categoria' }
+        category: skill.category || { id: '', name: 'Sem categoria' }
       }))
     } else {
       console.warn('Resposta inválida ao carregar skills:', skillsResponse.data)
@@ -856,7 +856,7 @@ const loadUserSkills = async () => {
 }
 
 // Função para visualizar perfil do usuário
-const viewUserProfile = (userId: number) => {
+const viewUserProfile = (userId: string) => {
   router.push(`/users/${userId}/profile`)
 }
 

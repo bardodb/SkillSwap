@@ -4,7 +4,7 @@ import { authService, oauthService } from '@/services/api'
 import { disconnectEcho } from '@/lib/echo'
 
 interface User {
-  id: number
+  id: string
   name: string
   email: string
   bio?: string

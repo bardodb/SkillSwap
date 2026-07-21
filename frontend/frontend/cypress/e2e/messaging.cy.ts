@@ -45,23 +45,31 @@ describe('Messaging E2E', () => {
     cy.get('[data-testid="chat-message"]').should('contain', unique)
   })
 
-  it('João opens deep link /chat?user=2 and can message Maria', () => {
+  it('João opens deep link /chat?user=<partner uuid> and can message Maria', () => {
     cy.loginUi(joao())
-    cy.intercept('GET', '**/api/conversations/2').as('mariaThread')
+    cy.intercept('GET', '**/api/conversations').as('conversations')
 
-    cy.visit('/chat?user=2')
-    cy.get('[data-testid="chat-page"]').should('be.visible')
-    cy.wait('@mariaThread').its('response.statusCode').should('eq', 200)
+    cy.visit('/chat')
+    cy.wait('@conversations').then((interception) => {
+      const list = interception.response?.body?.data as Array<{ partner: { id: string; name: string } }>
+      const maria = list.find((c) => c.partner.name.includes('Maria'))
+      expect(maria, 'seeded Maria conversation').to.exist
+      const mariaUuid = maria!.partner.id
 
-    cy.get('[data-testid="thread-partner"]').should('contain', 'Maria')
-    cy.get('[data-testid="message-composer"]').should('be.visible')
+      cy.intercept('GET', `**/api/conversations/${mariaUuid}`).as('mariaThread')
+      cy.visit(`/chat?user=${mariaUuid}`)
+      cy.get('[data-testid="chat-page"]').should('be.visible')
+      cy.wait('@mariaThread').its('response.statusCode').should('eq', 200)
+
+      cy.get('[data-testid="thread-partner"]').should('contain', 'Maria')
+      cy.get('[data-testid="message-composer"]').should('be.visible')
+    })
   })
 
   it('API: creating an exchange creates the first message for the receiver', () => {
     cy.loginApi(joao()).then((joaoAuth) => {
       cy.loginApi(maria()).then((mariaAuth) => {
-        // Use known demo skill ids from seed (João skill 1 Laravel, Maria skill 3 Design UX)
-        // Create a unique request by using different skill pairing if possible
+        // Use demo skill ids from API responses (UUID strings)
         cy.apiRequest('GET', '/my-skills', { token: joaoAuth.token }).then((mySkills) => {
           cy.apiRequest('GET', `/users/${mariaAuth.user.id}/profile`, { token: joaoAuth.token }).then(
             (profile) => {
@@ -71,9 +79,10 @@ describe('Messaging E2E', () => {
                 profile.body?.skills?.[0] ??
                 profile.body?.data?.user?.skills?.[0]
 
-              // Fallback to seeded ids when profile shape differs
-              const offeredId = offered?.id ?? 1
-              const requestedId = requested?.id ?? 3
+              const offeredId = offered?.id
+              const requestedId = requested?.id
+              expect(offeredId, 'offered skill id').to.be.a('string')
+              expect(requestedId, 'requested skill id').to.be.a('string')
 
               cy.apiRequest('POST', '/exchanges', {
                 token: joaoAuth.token,
@@ -88,12 +97,12 @@ describe('Messaging E2E', () => {
                 if (exchangeRes.status === 200 || exchangeRes.status === 201) {
                   expect(exchangeRes.body.success).to.eq(true)
                   expect(exchangeRes.body.conversation_partner_id).to.eq(mariaAuth.user.id)
-                  expect(exchangeRes.body.first_message_id).to.be.a('number')
+                  expect(exchangeRes.body.first_message_id).to.be.a('string')
 
                   cy.apiRequest('GET', '/conversations', { token: mariaAuth.token }).then((conv) => {
                     expect(conv.status).to.eq(200)
                     expect(conv.body.success).to.eq(true)
-                    const withJoao = (conv.body.data as Array<{ partner: { id: number }; can_message: boolean }>).find(
+                    const withJoao = (conv.body.data as Array<{ partner: { id: string }; can_message: boolean }>).find(
                       (c) => c.partner.id === joaoAuth.user.id
                     )
                     expect(withJoao, 'Maria should have conversation with João').to.exist

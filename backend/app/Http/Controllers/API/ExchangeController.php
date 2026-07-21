@@ -46,7 +46,7 @@ class ExchangeController extends Controller
                 $partner = $isInitiator ? $exchange->receiver : $exchange->initiator;
                 
                 return [
-                    'id' => $exchange->id,
+                    'id' => $exchange->uuid,
                     'status' => $exchange->status,
                     'message' => $exchange->message,
                     'created_at' => $exchange->created_at->format('Y-m-d H:i:s'),
@@ -54,20 +54,20 @@ class ExchangeController extends Controller
                     'completed_at' => $exchange->completed_at?->format('Y-m-d H:i:s'),
                     'is_initiator' => $isInitiator,
                     'partner' => [
-                        'id' => $partner->id,
+                        'id' => $partner->uuid,
                         'name' => $partner->name,
                         'avatar' => $partner->avatar,
                         'rating' => (float) ($partner->rating ?: 0.0)
                     ],
                     'offered_skill' => [
-                        'id' => $exchange->offeredSkill->id,
+                        'id' => $exchange->offeredSkill->uuid,
                         'title' => $exchange->offeredSkill->title,
                         'description' => $exchange->offeredSkill->description,
                         'level' => $exchange->offeredSkill->level,
                         'category' => $exchange->offeredSkill->category->name
                     ],
                     'requested_skill' => [
-                        'id' => $exchange->requestedSkill->id,
+                        'id' => $exchange->requestedSkill->uuid,
                         'title' => $exchange->requestedSkill->title,
                         'description' => $exchange->requestedSkill->description,
                         'level' => $exchange->requestedSkill->level,
@@ -97,9 +97,9 @@ class ExchangeController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                'receiver_id' => 'required|exists:users,id',
-                'offered_skill_id' => 'required|exists:skills,id',
-                'requested_skill_id' => 'required|exists:skills,id',
+                'receiver_id' => 'required|exists:users,uuid',
+                'offered_skill_id' => 'required|exists:skills,uuid',
+                'requested_skill_id' => 'required|exists:skills,uuid',
                 'message' => 'required|string|max:1000',
             ]);
 
@@ -112,11 +112,10 @@ class ExchangeController extends Controller
             }
 
             $initiator = $request->user();
-            $receiverId = $request->receiver_id;
-            $offeredSkillId = $request->offered_skill_id;
-            $requestedSkillId = $request->requested_skill_id;
+            $receiver = User::where('uuid', $request->receiver_id)->firstOrFail();
+            $receiverId = $receiver->id;
 
-            if ((int) $receiverId === (int) $initiator->id) {
+            if ($receiverId === (int) $initiator->id) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation errors',
@@ -126,8 +125,10 @@ class ExchangeController extends Controller
                 ], 422);
             }
 
-            $offeredSkill = Skill::findOrFail($offeredSkillId);
-            $requestedSkill = Skill::findOrFail($requestedSkillId);
+            $offeredSkill = Skill::where('uuid', $request->offered_skill_id)->firstOrFail();
+            $requestedSkill = Skill::where('uuid', $request->requested_skill_id)->firstOrFail();
+            $offeredSkillId = $offeredSkill->id;
+            $requestedSkillId = $requestedSkill->id;
 
             if ((int) $offeredSkill->user_id !== (int) $initiator->id) {
                 return response()->json([
@@ -206,7 +207,7 @@ class ExchangeController extends Controller
                 return [$exchange, $message];
             });
 
-            broadcast(new MessageSent($message->load('sender:id,name,avatar')));
+            broadcast(new MessageSent($message->load('sender:id,uuid,name,avatar')));
 
             // Carregar relacionamentos para resposta
             $exchange->load([
@@ -220,27 +221,27 @@ class ExchangeController extends Controller
                 'success' => true,
                 'message' => 'Solicitação de troca enviada com sucesso!',
                 'exchange' => [
-                    'id' => $exchange->id,
+                    'id' => $exchange->uuid,
                     'status' => $exchange->status,
                     'message' => $exchange->message,
                     'created_at' => $exchange->created_at->format('Y-m-d H:i:s'),
                     'receiver' => [
-                        'id' => $exchange->receiver->id,
+                        'id' => $exchange->receiver->uuid,
                         'name' => $exchange->receiver->name,
                         'avatar' => $exchange->receiver->avatar
                     ],
                     'offered_skill' => [
-                        'id' => $exchange->offeredSkill->id,
+                        'id' => $exchange->offeredSkill->uuid,
                         'title' => $exchange->offeredSkill->title,
                         'category' => $exchange->offeredSkill->category->name
                     ],
                     'requested_skill' => [
-                        'id' => $exchange->requestedSkill->id,
+                        'id' => $exchange->requestedSkill->uuid,
                         'title' => $exchange->requestedSkill->title,
                         'category' => $exchange->requestedSkill->category->name
                     ],
-                    'conversation_partner_id' => $receiverId,
-                    'first_message_id' => $message->id,
+                    'conversation_partner_id' => $receiver->uuid,
+                    'first_message_id' => $message->uuid,
                 ]
             ], 201);
             
@@ -259,6 +260,13 @@ class ExchangeController extends Controller
     public function show(Request $request, string $id)
     {
         try {
+            if (! Exchange::isValidPublicUuid($id)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Not found'
+                ], 404);
+            }
+
             $exchange = Exchange::with([
                 'initiator', 
                 'receiver', 
@@ -266,7 +274,8 @@ class ExchangeController extends Controller
                 'requestedSkill.category'
             ])
                 ->forParticipant($request->user())
-                ->findOrFail($id);
+                ->where('uuid', $id)
+                ->firstOrFail();
 
             $this->authorize('view', $exchange);
 
@@ -318,7 +327,8 @@ class ExchangeController extends Controller
             $user = $request->user();
 
             $exchange = Exchange::forParticipant($user)
-                ->findOrFail($id);
+                ->where('uuid', $id)
+                ->firstOrFail();
 
             $this->authorize('update', $exchange);
 
@@ -408,7 +418,7 @@ class ExchangeController extends Controller
         try {
             $user = $request->user();
 
-            $exchange = Exchange::forParticipant($user)->findOrFail($id);
+            $exchange = Exchange::forParticipant($user)->where('uuid', $id)->firstOrFail();
 
             $this->authorize('delete', $exchange);
 
