@@ -116,37 +116,50 @@ class ExchangeController extends Controller
             $offeredSkillId = $request->offered_skill_id;
             $requestedSkillId = $request->requested_skill_id;
 
-            // Verificar se não está tentando trocar consigo mesmo
-            if ($initiator->id === $receiverId) {
+            if ((int) $receiverId === (int) $initiator->id) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Você não pode criar uma troca consigo mesmo'
+                    'message' => 'Validation errors',
+                    'errors' => [
+                        'receiver_id' => ['Você não pode criar uma troca consigo mesmo'],
+                    ],
+                ], 422);
+            }
+
+            $offeredSkill = Skill::findOrFail($offeredSkillId);
+            $requestedSkill = Skill::findOrFail($requestedSkillId);
+
+            if ((int) $offeredSkill->user_id !== (int) $initiator->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation errors',
+                    'errors' => [
+                        'offered_skill_id' => ['A skill oferecida deve ser sua'],
+                    ],
+                ], 422);
+            }
+
+            if ((int) $requestedSkill->user_id !== (int) $receiverId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation errors',
+                    'errors' => [
+                        'requested_skill_id' => ['A skill pedida deve ser do destinatário'],
+                    ],
+                ], 422);
+            }
+
+            if (! $offeredSkill->is_available) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Habilidade oferecida não encontrada ou não disponível',
                 ], 400);
             }
 
-            // Verificar se o usuário possui a habilidade oferecida
-            $offeredSkill = Skill::where('id', $offeredSkillId)
-                ->where('user_id', $initiator->id)
-                ->where('is_available', true)
-                ->first();
-
-            if (!$offeredSkill) {
+            if (! $requestedSkill->is_available) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Habilidade oferecida não encontrada ou não disponível'
-                ], 400);
-            }
-
-            // Verificar se a habilidade solicitada pertence ao destinatário
-            $requestedSkill = Skill::where('id', $requestedSkillId)
-                ->where('user_id', $receiverId)
-                ->where('is_available', true)
-                ->first();
-
-            if (!$requestedSkill) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Habilidade solicitada não encontrada ou não disponível'
+                    'message' => 'Habilidade solicitada não encontrada ou não disponível',
                 ], 400);
             }
 

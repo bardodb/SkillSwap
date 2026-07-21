@@ -80,4 +80,84 @@ class IdorExchangeTest extends TestCase
             $this->deleteJson("/api/exchanges/{$exchange->id}")
         );
     }
+
+    /**
+     * @return array{a: User, b: User, skillA: Skill, skillB: Skill, category: Category}
+     */
+    private function twoUsersWithSkills(): array
+    {
+        $category = Category::create(['name' => 'T', 'description' => 't']);
+        $a = User::factory()->create();
+        $b = User::factory()->create();
+        $skillA = Skill::create([
+            'user_id' => $a->id, 'category_id' => $category->id,
+            'title' => 'A', 'description' => 'd', 'level' => 'beginner', 'is_available' => true,
+        ]);
+        $skillB = Skill::create([
+            'user_id' => $b->id, 'category_id' => $category->id,
+            'title' => 'B', 'description' => 'd', 'level' => 'beginner', 'is_available' => true,
+        ]);
+
+        return compact('a', 'b', 'skillA', 'skillB', 'category');
+    }
+
+    public function test_cannot_create_exchange_with_others_offered_skill(): void
+    {
+        $setup = $this->twoUsersWithSkills();
+
+        Sanctum::actingAs($setup['a']);
+        $response = $this->postJson('/api/exchanges', [
+            'receiver_id' => $setup['b']->id,
+            'offered_skill_id' => $setup['skillB']->id,
+            'requested_skill_id' => $setup['skillB']->id,
+            'message' => 'Tentativa inválida',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonPath('success', false)
+            ->assertJsonValidationErrors(['offered_skill_id']);
+    }
+
+    public function test_cannot_create_exchange_with_requested_skill_not_owned_by_receiver(): void
+    {
+        $setup = $this->twoUsersWithSkills();
+        $third = User::factory()->create();
+        $skillC = Skill::create([
+            'user_id' => $third->id,
+            'category_id' => $setup['category']->id,
+            'title' => 'C',
+            'description' => 'd',
+            'level' => 'beginner',
+            'is_available' => true,
+        ]);
+
+        Sanctum::actingAs($setup['a']);
+        $response = $this->postJson('/api/exchanges', [
+            'receiver_id' => $setup['b']->id,
+            'offered_skill_id' => $setup['skillA']->id,
+            'requested_skill_id' => $skillC->id,
+            'message' => 'Tentativa inválida',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonPath('success', false)
+            ->assertJsonValidationErrors(['requested_skill_id']);
+    }
+
+    public function test_cannot_create_self_exchange(): void
+    {
+        $setup = $this->twoUsersWithSkills();
+
+        Sanctum::actingAs($setup['a']);
+        $response = $this->postJson('/api/exchanges', [
+            'receiver_id' => $setup['a']->id,
+            'offered_skill_id' => $setup['skillA']->id,
+            'requested_skill_id' => $setup['skillA']->id,
+            'message' => 'Auto troca',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonPath('success', false)
+            ->assertJsonValidationErrors(['receiver_id']);
+    }
 }
