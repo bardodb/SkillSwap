@@ -74,4 +74,12 @@ describe('Auth E2E', () => {
     cy.visit('/dashboard')
     cy.url().should('include', '/login')
   })
+
+  it('AUTH-09: Visitante em rotas protegidas vai para /login', () => {
+    ;['/chat', '/profile', '/agenda'].forEach((path) => {
+      cy.clearAllLocalStorage()
+      cy.visit(path)
+      cy.url().should('include', '/login')
+    })
+  })
 })

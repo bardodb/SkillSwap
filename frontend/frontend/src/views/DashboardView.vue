@@ -141,7 +141,7 @@
         <!-- Left Column (2/3) -->
         <div class="lg:col-span-2 space-y-8">
           <!-- Activity Feed -->
-          <div class="bg-white rounded-xl shadow-sm border">
+          <div class="bg-white rounded-xl shadow-sm border" data-testid="dashboard-recent-exchanges">
             <div class="p-6 border-b">
               <div class="flex items-center justify-between">
                 <h2 class="text-lg font-semibold text-gray-900">Atividade Recente</h2>
@@ -157,6 +157,7 @@
                 <div 
                   v-for="exchange in recentExchanges" 
                   :key="exchange.id"
+                  data-testid="dashboard-exchange-item"
                   class="flex items-start space-x-4 p-4 bg-gray-50 rounded-lg"
                 >
                   <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
@@ -173,8 +174,9 @@
                     <span 
                       :class="{
                         'bg-green-100 text-green-800': exchange.status === 'completed',
-                        'bg-yellow-100 text-yellow-800': exchange.status === 'pending',
-                        'bg-red-100 text-red-800': exchange.status === 'cancelled'
+                        'bg-yellow-100 text-yellow-800': exchange.status === 'pending' || exchange.status === 'scheduled',
+                        'bg-red-100 text-red-800': exchange.status === 'cancelled' || exchange.status === 'rejected',
+                        'bg-blue-100 text-blue-800': exchange.status === 'accepted'
                       }"
                       class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
                     >
@@ -362,6 +364,7 @@
                       variant="outline" 
                       size="sm"
                       class="flex-1"
+                      data-testid="dashboard-match-view-profile"
                       @click="viewUserProfile(match.user_id)"
                     >
                       Ver Perfil
@@ -525,6 +528,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import axios from 'axios'
 import { authService, skillService, categoryService, exchangeService, statsService } from '@/services/api'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseCard from '@/components/ui/BaseCard.vue'
@@ -700,7 +704,10 @@ const getStatusVariant = (status: string): 'primary' | 'secondary' | 'danger' | 
   const variants: Record<string, 'primary' | 'secondary' | 'danger' | 'success' | 'warning'> = {
     completed: 'success',
     pending: 'warning',
-    cancelled: 'danger'
+    cancelled: 'danger',
+    accepted: 'primary',
+    rejected: 'danger',
+    scheduled: 'warning'
   }
   return variants[status] || 'secondary'
 }
@@ -709,7 +716,10 @@ const getStatusText = (status: string) => {
   const texts: Record<string, string> = {
     completed: 'Concluída',
     pending: 'Pendente',
-    cancelled: 'Cancelada'
+    cancelled: 'Cancelada',
+    accepted: 'Aceita',
+    rejected: 'Rejeitada',
+    scheduled: 'Agendada'
   }
   return texts[status] || status
 }
@@ -737,6 +747,10 @@ const loadDashboard = async () => {
         throw new Error('Usuário não encontrado')
       }
     } catch (userError) {
+      // Logout cancela requests em voo — não tratar como sessão inválida.
+      if (axios.isCancel(userError)) {
+        return
+      }
       console.error('Erro ao carregar dados do usuário:', userError)
       // Se não conseguir carregar o usuário, redirecionar para login
       router.push('/login')

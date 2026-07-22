@@ -2,6 +2,7 @@
 /**
  * Parses the YAML block in docs/testing/e2e-journey-matrix.md
  * Fails if covered / (P0+P1 non-excluded) < 0.90
+ * Fails if any `status: covered` scenario has no matching it('ID:...') in cypress/e2e/*.cy.ts
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -9,7 +10,22 @@ import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const matrixPath = path.resolve(__dirname, '../../../docs/testing/e2e-journey-matrix.md')
+const e2eDir = path.resolve(__dirname, '../cypress/e2e')
 const MIN_RATIO = 0.9
+
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function readAllSpecsContent(dir) {
+  const specFiles = fs.readdirSync(dir).filter((f) => f.endsWith('.cy.ts'))
+  return specFiles.map((f) => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n')
+}
+
+function hasAssertedTest(specsContent, id) {
+  const re = new RegExp(`it\\(['"\`]${escapeRegExp(id)}:`)
+  return re.test(specsContent)
+}
 
 function parseScenarios(md) {
   const match = md.match(/```yaml\r?\n([\s\S]*?)\r?\n```/)
@@ -48,6 +64,18 @@ if (ratio < MIN_RATIO) {
   const pending = eligible.filter((s) => s.status !== 'covered').map((s) => s.id)
   console.error('FAIL: journey coverage below threshold')
   console.error('Pending:', pending.join(', '))
+  process.exit(1)
+}
+
+const specsContent = readAllSpecsContent(e2eDir)
+const coveredWithoutTest = scenarios
+  .filter((s) => s.status === 'covered')
+  .filter((s) => !hasAssertedTest(specsContent, s.id))
+  .map((s) => s.id)
+
+if (coveredWithoutTest.length > 0) {
+  console.error('FAIL: scenarios marked covered with no matching it(ID:...) title:')
+  console.error(coveredWithoutTest.join(', '))
   process.exit(1)
 }
 

@@ -33,6 +33,7 @@ describe('Dashboard E2E', () => {
     cy.loginUi(maria())
     cy.intercept('GET', '**/api/categories').as('getCategories')
     cy.intercept('POST', '**/api/skills').as('createSkill')
+    cy.intercept('DELETE', '**/api/skills/*').as('deleteSkill')
 
     dashboardPage.visit().assertLoaded()
     cy.wait('@getCategories').then((interception) => {
@@ -51,6 +52,13 @@ describe('Dashboard E2E', () => {
 
       cy.get('[data-testid="add-skill-modal"]').should('not.exist')
       dashboardPage.assertSkillVisible(title)
+
+      // Cleanup: avoid leaking test skills into shared/dev DB across runs —
+      // an accumulating "E2E Skill ..." backlog pushes seeded skills off
+      // page 1 of the (client-side-filtered) /skills listing over time.
+      cy.on('window:confirm', () => true)
+      dashboardPage.deleteSkillByTitle(title)
+      cy.wait('@deleteSkill').its('response.statusCode').should('be.oneOf', [200, 204])
     })
   })
 
@@ -145,5 +153,26 @@ describe('Dashboard E2E', () => {
     dashboardPage.assertMatchesVisible()
     cy.wait('@getMatches').its('response.statusCode').should('eq', 200)
     cy.get('[data-testid="dashboard-matches"]').should('contain', 'Matches Recomendados')
+  })
+
+  it('EXCH-11: dashboard lista trocas recentes após login', () => {
+    cy.loginUi(maria())
+    cy.intercept('GET', '**/api/exchanges').as('exchanges')
+
+    dashboardPage.visit().assertLoaded()
+    cy.wait('@exchanges')
+    cy.get('[data-testid="dashboard-recent-exchanges"]').should('be.visible')
+    cy.get('[data-testid="dashboard-exchange-item"]').should('have.length.greaterThan', 0)
+  })
+
+  it('DASH-08: click Ver Perfil em um match abre o perfil do usuário', () => {
+    cy.loginUi(maria())
+    cy.intercept('GET', '**/api/skill-matches').as('getMatches')
+
+    dashboardPage.visit().assertLoaded()
+    cy.wait('@getMatches')
+    cy.get('[data-testid="dashboard-match-view-profile"]').first().click()
+    cy.url().should('match', /\/users\/.+\/profile/)
+    cy.get('[data-testid="user-profile-page"]').should('be.visible')
   })
 })

@@ -80,7 +80,13 @@ describe('Exchanges E2E', () => {
                 })
 
                 // Happy path only — must create successfully so UI shows dashboard + Maria's chat
-                cy.wait('@createExchange').its('response.statusCode').should('be.oneOf', [200, 201])
+                cy.wait('@createExchange').then((interception) => {
+                  const body = interception.response?.body
+                  const createdId = body?.exchange?.id ?? body?.data?.id ?? body?.id
+                  expect(interception.response?.statusCode).to.be.oneOf([200, 201])
+                  expect(createdId, 'created exchange id').to.be.a('string')
+                  cy.wrap(createdId).as('exchangeId')
+                })
                 cy.url().should('include', '/dashboard')
                 cy.get('[data-testid="exchange-modal"]').should('not.exist')
 
@@ -93,6 +99,17 @@ describe('Exchanges E2E', () => {
                 cy.wait('@thread').its('response.statusCode').should('eq', 200)
                 cy.get('[data-testid="thread-partner"]').should('contain', 'João')
                 cy.contains('[data-testid="chat-message"]', proposalMsg).should('be.visible')
+
+                // Cleanup: this exchange stays "pending" (never resolved), which
+                // permanently blocks this (offered, requested) skill pair for future
+                // runs against the shared seed — the 3x3=9 João↔Maria pool exhausts
+                // after a handful of runs otherwise. Delete it (only allowed while
+                // pending and by the initiator — both true here).
+                cy.get('@exchangeId').then((exchangeId) => {
+                  cy.apiRequest('DELETE', `/exchanges/${exchangeId}`, {
+                    token: joaoAuth.token,
+                  }).its('status').should('eq', 200)
+                })
               })
             }
           )
@@ -289,6 +306,15 @@ describe('Exchanges E2E', () => {
                     expect(accept.status).to.eq(200)
                     expect(accept.body.success).to.eq(true)
                     expect(accept.body.exchange.status).to.eq('accepted')
+
+                    // Cleanup: "accepted" is a live status and would permanently
+                    // block this skill pair for future runs (destroy() only allows
+                    // deleting while "pending"). Cancel it — allowed by either
+                    // participant regardless of current status.
+                    cy.apiRequest('PUT', `/exchanges/${exchangeId}`, {
+                      token: joaoAuth.token,
+                      body: { status: 'cancelled' },
+                    }).its('status').should('eq', 200)
                   })
                 })
               }
@@ -316,6 +342,104 @@ describe('Exchanges E2E', () => {
           body: { status: 'accepted' },
         }).then((res) => {
           expect(res.status).to.eq(403)
+        })
+      })
+    })
+  })
+
+  it('EXCH-08: receptor rejeita troca pendente e status reflete no dashboard', () => {
+    cy.loginApi(joao()).then((joaoAuth) => {
+      cy.loginApi(maria()).then((mariaAuth) => {
+        cy.createFreeExchange({
+          initiatorToken: joaoAuth.token,
+          receiverId: mariaAuth.user.id,
+          receiverToken: mariaAuth.token,
+          message: `EXCH-08 reject ${Date.now()}`,
+        }).then((created) => {
+          const exchangeId = created.body.exchange?.id ?? created.body.data?.id ?? created.body.id
+
+          cy.apiRequest('PUT', `/exchanges/${exchangeId}`, {
+            token: mariaAuth.token,
+            body: { status: 'rejected' },
+          }).then((rejected) => {
+            expect(rejected.status).to.eq(200)
+            expect(rejected.body.exchange.status).to.eq('rejected')
+
+            cy.loginUi(maria())
+            cy.intercept('GET', '**/api/exchanges').as('exchanges')
+            cy.visit('/dashboard')
+            cy.wait('@exchanges')
+            cy.get('[data-testid="dashboard-exchange-item"]')
+              .contains('[data-testid="dashboard-exchange-item"]', 'João')
+              .should('contain', 'Rejeitada')
+          })
+        })
+      })
+    })
+  })
+
+  it('EXCH-09: troca accepted pode ser marcada completed e dashboard reflete', () => {
+    cy.loginApi(joao()).then((joaoAuth) => {
+      cy.loginApi(maria()).then((mariaAuth) => {
+        cy.createFreeExchange({
+          initiatorToken: joaoAuth.token,
+          receiverId: mariaAuth.user.id,
+          receiverToken: mariaAuth.token,
+          message: `EXCH-09 complete ${Date.now()}`,
+        }).then((created) => {
+          const exchangeId = created.body.exchange?.id ?? created.body.data?.id ?? created.body.id
+
+          cy.apiRequest('PUT', `/exchanges/${exchangeId}`, {
+            token: mariaAuth.token,
+            body: { status: 'accepted' },
+          }).then((accepted) => {
+            expect(accepted.status).to.eq(200)
+
+            cy.apiRequest('PUT', `/exchanges/${exchangeId}`, {
+              token: joaoAuth.token,
+              body: { status: 'completed' },
+            }).then((completed) => {
+              expect(completed.status).to.eq(200)
+              expect(completed.body.exchange.status).to.eq('completed')
+
+              cy.loginUi(maria())
+              cy.intercept('GET', '**/api/exchanges').as('exchanges')
+              cy.visit('/dashboard')
+              cy.wait('@exchanges')
+              cy.contains('[data-testid="dashboard-exchange-item"]', 'João').should('contain', 'Concluída')
+            })
+          })
+        })
+      })
+    })
+  })
+
+  it('EXCH-10: usuário sem participar da troca não pode alterar status (403/404)', () => {
+    cy.loginApi(joao()).then((joaoAuth) => {
+      cy.loginApi(maria()).then((mariaAuth) => {
+        cy.createFreeExchange({
+          initiatorToken: joaoAuth.token,
+          receiverId: mariaAuth.user.id,
+          receiverToken: mariaAuth.token,
+          message: `EXCH-10 stranger ${Date.now()}`,
+        }).then((created) => {
+          const exchangeId = created.body.exchange?.id ?? created.body.data?.id ?? created.body.id
+
+          cy.loginApi(carlos).then((carlosAuth) => {
+            cy.apiRequest('PUT', `/exchanges/${exchangeId}`, {
+              token: carlosAuth.token,
+              body: { status: 'accepted' },
+            }).then((res) => {
+              expect(res.status).to.eq(404)
+
+              // Cleanup: Carlos's attempt failed (404, IDOR-scoped), so the
+              // exchange is still "pending" — delete it to free the pair
+              // instead of leaking it permanently into the shared seed.
+              cy.apiRequest('DELETE', `/exchanges/${exchangeId}`, {
+                token: joaoAuth.token,
+              }).its('status').should('eq', 200)
+            })
+          })
         })
       })
     })

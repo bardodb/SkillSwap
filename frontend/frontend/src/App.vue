@@ -3,6 +3,7 @@ import { RouterLink, RouterView } from 'vue-router'
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { setLoggingOut } from '@/services/api'
 import BaseButton from '@/components/ui/BaseButton.vue'
 
 const router = useRouter()
@@ -10,8 +11,12 @@ const authStore = useAuthStore()
 const mobileMenuOpen = ref(false)
 
 const handleLogout = async () => {
-  await authStore.logout()
-  router.push('/')
+  try {
+    await authStore.logout()
+    await router.push('/')
+  } finally {
+    setLoggingOut(false)
+  }
 }
 
 const toggleMobileMenu = () => {
@@ -213,7 +218,7 @@ onMounted(async () => {
     </main>
 
     <!-- Footer -->
-    <footer class="bg-secondary-900 text-white">
+    <footer class="bg-secondary-900 text-white" data-testid="footer">
       <div class="container-custom">
         <div class="py-12">
           <div class="grid grid-cols-1 md:grid-cols-4 gap-8">

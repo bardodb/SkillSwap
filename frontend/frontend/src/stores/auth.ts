@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { authService, oauthService } from '@/services/api'
+import { authService, oauthService, cancelPendingRequests, setLoggingOut } from '@/services/api'
 import { disconnectEcho } from '@/lib/echo'
 
 interface User {
@@ -103,6 +103,9 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const logout = async () => {
+    setLoggingOut(true)
+    // Cancela cedo: 401s em voo do dashboard não devem redirecionar para /login.
+    cancelPendingRequests()
     try {
       if (token.value) {
         await authService.logout()
@@ -115,6 +118,8 @@ export const useAuthStore = defineStore('auth', () => {
       token.value = null
       localStorage.removeItem('token')
       localStorage.removeItem('user')
+      cancelPendingRequests()
+      // loggingOut permanece true até App.vue navegar para `/`
     }
   }
 

@@ -42,4 +42,24 @@ describe('Static Pages E2E', () => {
     cy.url().should('include', '/contact')
     cy.get('[data-testid="contact-name"] input').should('have.value', '')
   })
+
+  it('STAT-04: footer links navegam para as páginas correspondentes', () => {
+    const footerLinks: Array<{ text: string; path: string }> = [
+      { text: 'Habilidades', path: '/skills' },
+      { text: 'Sobre Nós', path: '/about' },
+      { text: 'Contato', path: '/contact' },
+      { text: 'Central de Ajuda', path: '/help-center' },
+      { text: 'FAQ', path: '/faq' },
+      { text: 'Política de Privacidade', path: '/privacy-policy' },
+      { text: 'Termos de Uso', path: '/terms-of-use' },
+    ]
+
+    footerLinks.forEach(({ text, path }) => {
+      cy.visit('/')
+      cy.get('[data-testid="footer"]').should('be.visible').within(() => {
+        cy.contains('a', text).click()
+      })
+      cy.url().should('include', path)
+    })
+  })
 })

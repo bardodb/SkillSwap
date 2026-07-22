@@ -1,33 +1,32 @@
 /// <reference types="cypress" />
+import chatPage from '../pages/ChatPage'
 
 describe('Messaging E2E', () => {
   const maria = () => Cypress.env('demoMaria') as { email: string; password: string }
   const joao = () => Cypress.env('demoJoao') as { email: string; password: string }
 
-  it('Maria opens seeded conversation with João and sees the first exchange message', () => {
+  it('CHAT-01: Maria opens seeded conversation with João and sees the first exchange message', () => {
     cy.loginUi(maria())
     cy.intercept('GET', '**/api/conversations').as('conversations')
     cy.intercept('GET', '**/api/conversations/*').as('thread')
 
-    cy.visit('/chat')
-    cy.get('[data-testid="chat-page"]').should('be.visible')
+    chatPage.visit().assertLoaded()
     cy.wait('@conversations').its('response.statusCode').should('eq', 200)
 
     cy.get('[data-testid="conversation-list"]').should('be.visible')
-    cy.contains('[data-testid^="conversation-item-"]', 'João Silva').click()
+    chatPage.openConversationByName('João Silva')
     cy.wait('@thread').its('response.statusCode').should('eq', 200)
 
-    cy.get('[data-testid="thread-partner"]').should('contain', 'João Silva')
+    chatPage.assertThreadPartner('João Silva')
     cy.get('[data-testid="message-thread"]').within(() => {
       cy.get('[data-testid="chat-message"]').should('have.length.at.least', 1)
-      cy.contains('[data-testid="chat-message"]', 'Claro').should('be.visible')
+      chatPage.assertMessageVisible('Claro')
     })
     cy.get('[data-testid="message-composer"]').should('be.visible')
-    cy.get('[data-testid="message-input"] input').should('not.be.disabled')
-    cy.get('[data-testid="composer-disabled-reason"]').should('not.exist')
+    chatPage.assertComposerEnabled()
   })
 
-  it('Maria sends a message and it appears in the thread', () => {
+  it('CHAT-02: Maria sends a message and it appears in the thread', () => {
     const unique = `E2E Maria ${Date.now()}`
 
     cy.loginUi(maria())
@@ -45,7 +44,7 @@ describe('Messaging E2E', () => {
     cy.get('[data-testid="chat-message"]').should('contain', unique)
   })
 
-  it('João opens deep link /chat?user=<partner uuid> and can message Maria', () => {
+  it('CHAT-03: João opens deep link /chat?user=<partner uuid> and can message Maria', () => {
     cy.loginUi(joao())
     cy.intercept('GET', '**/api/conversations').as('conversations')
 
@@ -66,7 +65,7 @@ describe('Messaging E2E', () => {
     })
   })
 
-  it('API: creating an exchange creates the first message for the receiver', () => {
+  it('CHAT-04: API: creating an exchange creates the first message for the receiver', () => {
     cy.loginApi(joao()).then((joaoAuth) => {
       cy.loginApi(maria()).then((mariaAuth) => {
         // Use demo skill ids from API responses (UUID strings)
@@ -96,8 +95,15 @@ describe('Messaging E2E', () => {
                 // 200/201 success OR 400 if duplicate live exchange for same skills
                 if (exchangeRes.status === 200 || exchangeRes.status === 201) {
                   expect(exchangeRes.body.success).to.eq(true)
-                  expect(exchangeRes.body.conversation_partner_id).to.eq(mariaAuth.user.id)
-                  expect(exchangeRes.body.first_message_id).to.be.a('string')
+                  // These live under `exchange`, not at the top level of the
+                  // response (confirmed in ExchangeController::store) — the
+                  // previous top-level checks were always undefined, so this
+                  // branch deterministically failed on the first attempt and
+                  // only "passed" after Cypress auto-retried into the
+                  // duplicate-exchange branch below (which never leaked into
+                  // this DB, but the first attempt's exchange did).
+                  expect(exchangeRes.body.exchange.conversation_partner_id).to.eq(mariaAuth.user.id)
+                  expect(exchangeRes.body.exchange.first_message_id).to.be.a('string')
 
                   cy.apiRequest('GET', '/conversations', { token: mariaAuth.token }).then((conv) => {
                     expect(conv.status).to.eq(200)
@@ -107,6 +113,14 @@ describe('Messaging E2E', () => {
                     )
                     expect(withJoao, 'Maria should have conversation with João').to.exist
                     expect(withJoao!.can_message).to.eq(true)
+
+                    // Cleanup: this exchange stays "pending" (never resolved),
+                    // permanently blocking this (offered, requested) pair for
+                    // future runs against the shared seed. Delete it (allowed
+                    // while pending, by the initiator — both true here).
+                    cy.apiRequest('DELETE', `/exchanges/${exchangeRes.body.exchange.id}`, {
+                      token: joaoAuth.token,
+                    }).its('status').should('eq', 200)
                   })
                 } else {
                   // Duplicate live exchange is acceptable for seeded demo — assert conversations still work
@@ -124,7 +138,7 @@ describe('Messaging E2E', () => {
     })
   })
 
-  it('API: send gate returns 422 without a live exchange', () => {
+  it('CHAT-05: API: send gate returns 422 without a live exchange', () => {
     // Register a fresh user with no exchanges, try messaging João
     const email = `e2e.gate.${Date.now()}@test.com`
     cy.request({

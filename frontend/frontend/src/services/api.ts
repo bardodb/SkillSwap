@@ -33,12 +33,29 @@ const api = axios.create({
   }
 })
 
+// Controller usado para cancelar requisições pendentes (ex: ao fazer logout),
+// evitando que respostas 401 de chamadas "em voo" disparem um redirect indevido.
+let abortController = new AbortController()
+let loggingOut = false
+
+export const setLoggingOut = (value: boolean) => {
+  loggingOut = value
+}
+
+export const cancelPendingRequests = () => {
+  abortController.abort()
+  abortController = new AbortController()
+}
+
 // Interceptor para adicionar token de autenticação
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
+    }
+    if (!config.signal) {
+      config.signal = abortController.signal
     }
     return config
   },
@@ -51,11 +68,19 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (axios.isCancel(error)) {
+      return Promise.reject(error)
+    }
     if (error.response?.status === 401) {
-      // Token expirado ou inválido
+      const requestUrl = String(error.config?.url || '')
+      const isLogoutRequest = requestUrl.includes('/logout')
+      // Token expirado ou inválido — durante logout o App navega para `/`;
+      // não hijackar com hard redirect para `/login` (nem no próprio /logout).
       localStorage.removeItem('token')
       localStorage.removeItem('user')
-      window.location.href = '/login'
+      if (!loggingOut && !isLogoutRequest) {
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(error)
   }
