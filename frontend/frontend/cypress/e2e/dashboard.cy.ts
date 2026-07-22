@@ -106,43 +106,34 @@ describe('Dashboard E2E', () => {
     cy.get('[data-testid="add-skill-modal"]').should('be.visible')
   })
 
-  it('DASH-05: invalid token redirects to login or blocks dashboard', () => {
-    cy.window().then((win) => {
-      win.localStorage.setItem('token', 'invalid')
-      win.localStorage.setItem(
-        'user',
-        JSON.stringify({
-          id: '00000000-0000-0000-0000-000000000001',
-          name: 'Invalid User',
-          email: 'invalid@skillswap.com',
-          rating: 0,
-          total_exchanges: 0,
-        })
-      )
-    })
-
+  it('DASH-05: invalid token redirects to login', () => {
     cy.intercept('GET', '**/api/user', { statusCode: 401, body: { message: 'Unauthenticated' } }).as(
       'getUserUnauthorized'
     )
 
-    dashboardPage.visit()
-
-    cy.url({ timeout: 10000 }).should('satisfy', (url: string) => {
-      return url.includes('/login') || url.includes('/dashboard')
+    // Seed invalid session before the SPA boots so initializeAuth + 401 interceptor run.
+    cy.visit('/dashboard', {
+      onBeforeLoad(win) {
+        win.localStorage.setItem('token', 'invalid')
+        win.localStorage.setItem(
+          'user',
+          JSON.stringify({
+            id: '00000000-0000-0000-0000-000000000001',
+            name: 'Invalid User',
+            email: 'invalid@skillswap.com',
+            rating: 0,
+            total_exchanges: 0,
+          })
+        )
+      },
     })
 
-    cy.url().then((url) => {
-      if (url.includes('/login')) {
-        cy.get('[data-testid="login-email"]').should('be.visible')
-      } else {
-        cy.get('body').then(($body) => {
-          const hasError =
-            $body.find('[data-testid="dashboard-page"] .text-danger-500').length > 0 ||
-            $body.text().includes('Erro')
-          expect(hasError, 'dashboard error handling').to.eq(true)
-        })
-      }
-    })
+    cy.wait('@getUserUnauthorized')
+    // App clears the session and hard-redirects on 401 — assert the final outcome,
+    // not the brief /dashboard flash before window.location.href = '/login'.
+    cy.url({ timeout: 10000 }).should('include', '/login')
+    cy.get('[data-testid="login-email"]').should('be.visible')
+    cy.window().its('localStorage.token').should('not.exist')
   })
 
   it('DASH-06: matches section is visible', () => {
@@ -155,7 +146,7 @@ describe('Dashboard E2E', () => {
     cy.get('[data-testid="dashboard-matches"]').should('contain', 'Matches Recomendados')
   })
 
-  it('EXCH-11: dashboard lista trocas recentes após login', () => {
+  it('DASH-07: dashboard lista trocas recentes após login', () => {
     cy.loginUi(maria())
     cy.intercept('GET', '**/api/exchanges').as('exchanges')
 

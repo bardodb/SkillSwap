@@ -9,17 +9,31 @@ Cypress.on('uncaught:exception', (err) => {
   ) {
     return false
   }
+
+  // Cypress command-log snapshot highlighter (_showSnapshotVue → highlightEl)
+  // can throw when measuring padding/margin; not an app failure.
+  if (err.message.includes('Element attr did not return a valid number')) {
+    return false
+  }
+
   return true
 })
 
-// Slow clicks in interactive mode (cy:open) so the UI is easier to follow.
-// Headless `cypress run` stays at normal speed.
+// Mild slowdown for primary button clicks in cy:open only (not input focus from .type()).
 if (Cypress.config('isInteractive')) {
-  const CLICK_DELAY_MS = 3000
+  const CLICK_DELAY_MS = 400
 
   Cypress.Commands.overwrite('click', (originalFn, subject, options) => {
+    const el = subject?.[0] as HTMLElement | undefined
+    const tag = el?.tagName?.toLowerCase()
+    const isButtonLike =
+      tag === 'button' || el?.getAttribute('role') === 'button' || tag === 'a'
+
+    if (!isButtonLike) {
+      return originalFn(subject, options)
+    }
+
     return originalFn(subject, options).then(($el) => {
-      // Use a plain Promise — do not call cy.* inside this .then()
       return new Cypress.Promise((resolve) => {
         setTimeout(() => resolve($el), CLICK_DELAY_MS)
       })

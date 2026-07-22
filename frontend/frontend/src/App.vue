@@ -205,16 +205,7 @@ onMounted(async () => {
 
     <!-- Main Content -->
     <main class="flex-1">
-      <RouterView v-slot="{ Component }">
-        <transition
-          name="page"
-          enter-active-class="animate-fade-in"
-          leave-active-class="animate-fade-in"
-          mode="out-in"
-        >
-          <component :is="Component" />
-        </transition>
-      </RouterView>
+      <RouterView />
     </main>
 
     <!-- Footer -->
@@ -293,21 +284,5 @@ onMounted(async () => {
 
 .router-link-active span {
   @apply w-full;
-}
-
-/* Page transitions */
-.page-enter-active,
-.page-leave-active {
-  transition: all 0.3s ease-in-out;
-}
-
-.page-enter-from {
-  opacity: 0;
-  transform: translateY(10px);
-}
-
-.page-leave-to {
-  opacity: 0;
-  transform: translateY(-10px);
 }
 </style>

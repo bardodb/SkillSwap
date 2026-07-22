@@ -58,5 +58,9 @@ describe('Profile E2E', () => {
         expect(res.body.errors?.email ?? res.body.message).to.exist
       })
     })
+    // Restore a visible page so cy:open preview is not left on an empty request snapshot.
+    cy.loginUi(maria())
+    cy.visit('/profile')
+    cy.get('[data-testid="profile-page"]').should('be.visible')
   })
 })
