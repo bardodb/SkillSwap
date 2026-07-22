@@ -146,7 +146,7 @@ describe('Dashboard E2E', () => {
     cy.get('[data-testid="dashboard-matches"]').should('contain', 'Matches Recomendados')
   })
 
-  it('DASH-07: dashboard lista trocas recentes após login', () => {
+  it('EXCH-11: dashboard lista trocas recentes após login', () => {
     cy.loginUi(maria())
     cy.intercept('GET', '**/api/exchanges').as('exchanges')
 
