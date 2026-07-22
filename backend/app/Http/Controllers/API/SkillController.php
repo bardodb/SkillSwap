@@ -112,7 +112,19 @@ class SkillController extends Controller
      */
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(), [
+        $payload = $request->all();
+        if ($request->filled('category_id')) {
+            $resolvedCategoryId = $this->resolvePublicCategoryId($request->input('category_id'));
+            if ($resolvedCategoryId === null) {
+                return response()->json([
+                    'message' => 'Validation errors',
+                    'errors' => ['category_id' => ['The selected category id is invalid.']],
+                ], 422);
+            }
+            $payload['category_id'] = $resolvedCategoryId;
+        }
+
+        $validator = Validator::make($payload, [
             'category_id' => 'required|exists:categories,id',
             'title' => 'required|string|max:255',
             'description' => 'required|string',
@@ -130,12 +142,12 @@ class SkillController extends Controller
 
         $skill = Skill::create([
             'user_id' => $request->user()->id,
-            'category_id' => $request->category_id,
-            'title' => $request->title,
-            'description' => $request->description,
-            'level' => $request->level,
-            'image' => $request->image,
-            'tags' => $request->tags,
+            'category_id' => $payload['category_id'],
+            'title' => $payload['title'],
+            'description' => $payload['description'],
+            'level' => $payload['level'],
+            'image' => $payload['image'] ?? null,
+            'tags' => $payload['tags'] ?? null,
             'is_available' => true,
         ]);
 

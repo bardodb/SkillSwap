@@ -97,6 +97,7 @@ onMounted(async () => {
                 <BaseButton 
                   variant="danger" 
                   size="sm"
+                  data-testid="nav-logout"
                   @click="handleLogout"
                 >
                   Sair

@@ -11,3 +11,18 @@ Cypress.on('uncaught:exception', (err) => {
   }
   return true
 })
+
+// Slow clicks in interactive mode (cy:open) so the UI is easier to follow.
+// Headless `cypress run` stays at normal speed.
+if (Cypress.config('isInteractive')) {
+  const CLICK_DELAY_MS = 3000
+
+  Cypress.Commands.overwrite('click', (originalFn, subject, options) => {
+    return originalFn(subject, options).then(($el) => {
+      // Use a plain Promise — do not call cy.* inside this .then()
+      return new Cypress.Promise((resolve) => {
+        setTimeout(() => resolve($el), CLICK_DELAY_MS)
+      })
+    })
+  })
+}

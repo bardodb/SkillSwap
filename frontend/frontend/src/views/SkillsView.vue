@@ -1,5 +1,5 @@
 <template>
-  <div class="skills-page">
+  <div class="skills-page" data-testid="skills-page">
     <!-- Hero Section -->
     <section class="bg-gradient-to-br from-primary-50 via-white to-secondary-50 pt-20 pb-16">
       <div class="container-custom">
@@ -17,6 +17,7 @@
             <div class="relative">
               <BaseInput
                 v-model="searchQuery"
+                data-testid="skills-search"
                 placeholder="Buscar habilidades... (ex: JavaScript, Design, Inglês)"
                 size="lg"
                 class="pr-12"
@@ -86,6 +87,7 @@
         <!-- Category Filters -->
         <div class="flex flex-wrap gap-3">
           <button
+            data-testid="skills-category-all"
             @click="selectedCategory = null"
             :class="[
               'px-4 py-2 rounded-full text-sm font-medium transition-all duration-200',
@@ -99,6 +101,7 @@
           <button
             v-for="category in categories"
             :key="category.id"
+            :data-testid="`skills-category-${category.id}`"
             @click="selectedCategory = category.id"
             :class="[
               'px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center gap-2',
@@ -131,7 +134,7 @@
         </div>
         
         <!-- Error State -->
-        <div v-else-if="error" class="text-center py-20">
+        <div v-else-if="error" class="text-center py-20" data-testid="skills-error">
           <div class="text-danger-500 text-lg mb-4">{{ error }}</div>
           <BaseButton variant="outline" @click="loadSkills">
             Tentar Novamente
@@ -139,7 +142,7 @@
         </div>
         
         <!-- No Results -->
-        <div v-else-if="filteredSkills.length === 0" class="text-center py-20">
+        <div v-else-if="filteredSkills.length === 0" class="text-center py-20" data-testid="skills-empty">
           <div class="text-6xl mb-4">🔍</div>
           <h3 class="text-2xl font-bold text-secondary-900 mb-2">Nenhuma habilidade encontrada</h3>
           <p class="text-secondary-600 mb-6">
@@ -155,6 +158,7 @@
           <BaseCard
             v-for="skill in filteredSkills"
             :key="skill.id"
+            data-testid="skill-card"
             hover
             class="cursor-pointer group transition-all duration-300"
             @click="goToSkill(skill.id)"
@@ -205,6 +209,7 @@
           <BaseCard
             v-for="skill in filteredSkills"
             :key="skill.id"
+            data-testid="skill-card"
             hover
             class="cursor-pointer group transition-all duration-300"
             @click="goToSkill(skill.id)"
@@ -302,7 +307,7 @@ interface Skill {
   category_color: string
   instructor_name: string
   rating: number
-  category_id: number
+  category_id: number | string
 }
 
 const router = useRouter()
@@ -314,7 +319,7 @@ const error = ref<string | null>(null)
 const categories = ref<Category[]>([])
 const skills = ref<Skill[]>([])
 const searchQuery = ref('')
-const selectedCategory = ref<number | null>(null)
+const selectedCategory = ref<number | string | null>(null)
 const viewMode = ref<'grid' | 'list'>('grid')
 const hasMore = ref(true)
 
@@ -378,7 +383,7 @@ const loadSkills = async () => {
         name: s.title ?? s.name ?? '',
         description: s.description ?? '',
         level: s.level ?? '',
-        category_id: s.category_id,
+        category_id: s.category?.id ?? s.category_id,
         category_name: s.category?.name ?? s.category_name ?? '',
         category_color: s.category?.color ?? s.category_color ?? '#64748b',
         instructor_name: s.user?.name ?? s.instructor_name ?? 'Desconhecido',

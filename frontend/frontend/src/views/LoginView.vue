@@ -16,7 +16,7 @@
 
       <!-- Form Card -->
       <BaseCard class="bg-white shadow-large">
-        <form @submit.prevent="handleLogin" class="space-y-6">
+        <form @submit.prevent="handleLogin" class="space-y-6" novalidate>
           <!-- Email Field -->
           <BaseInput
             v-model="form.email"
@@ -83,7 +83,7 @@
           </div>
 
           <!-- General Error -->
-          <div v-if="errors.general" class="text-center">
+          <div v-if="errors.general" class="text-center" data-testid="login-error">
             <div class="bg-danger-50 border border-danger-200 rounded-xl p-4">
               <div class="flex items-center">
                 <svg class="w-5 h-5 text-danger-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

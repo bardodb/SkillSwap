@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-gray-50 to-white">
+  <div class="min-h-screen bg-gradient-to-br from-gray-50 to-white" data-testid="profile-page">
     <!-- Header Section -->
     <section class="bg-white border-b border-gray-200 sticky top-0 z-10">
       <div class="container-custom py-6">
@@ -16,6 +16,7 @@
             <BaseButton 
               variant="outline" 
               size="md"
+              data-testid="profile-edit"
               @click="toggleEditMode"
             >
               <template #icon-left>
@@ -144,12 +145,14 @@
                     <BaseInput
                       v-model="editForm.location"
                       label="Localização"
+                      data-testid="profile-location"
                       placeholder="Cidade, Estado"
                     />
                     <BaseInput
                       v-model="editForm.bio"
                       label="Bio"
                       type="textarea"
+                      data-testid="profile-bio"
                       placeholder="Fale um pouco sobre você, suas experiências e interesses..."
                       rows="3"
                     />

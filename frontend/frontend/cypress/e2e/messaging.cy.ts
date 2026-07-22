@@ -153,4 +153,47 @@ describe('Messaging E2E', () => {
       })
     })
   })
+
+  it('CHAT-06: usuário novo abre /chat sem conversas', () => {
+    const email = `e2e.chat.empty.${Date.now()}@test.com`
+    const password = 'password123'
+
+    cy.request({
+      method: 'POST',
+      url: `${Cypress.env('apiUrl')}/register`,
+      body: {
+        name: 'E2E Empty Chat',
+        email,
+        password,
+        password_confirmation: password,
+      },
+    }).then((reg) => {
+      expect(reg.status).to.be.oneOf([200, 201])
+    })
+
+    cy.loginUi({ email, password })
+    cy.intercept('GET', '**/api/conversations').as('conversations')
+
+    cy.visit('/chat')
+    cy.get('[data-testid="chat-page"]').should('be.visible')
+    cy.wait('@conversations').its('response.statusCode').should('eq', 200)
+    cy.get('[data-testid="conversation-list"]').should('be.visible')
+    cy.get('[data-testid^="conversation-item-"]').should('not.exist')
+    cy.get('[data-testid="composer-disabled-reason"]').should(
+      'contain',
+      'Selecione uma conversa para enviar mensagens.'
+    )
+  })
+
+  it('CHAT-07: deep link com UUID inexistente mostra erro sem crash', () => {
+    cy.loginUi(maria())
+    cy.intercept('GET', '**/api/conversations/*').as('missingThread')
+
+    cy.visit('/chat?user=00000000-0000-4000-8000-000000000099')
+    cy.get('[data-testid="chat-page"]').should('be.visible')
+    cy.wait('@missingThread').its('response.statusCode').should('eq', 404)
+
+    cy.contains('Não foi possível carregar esta conversa.').should('be.visible')
+    cy.get('[data-testid="thread-partner"]').should('not.exist')
+  })
 })

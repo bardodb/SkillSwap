@@ -1,0 +1,21 @@
+﻿# Local AI / agent tooling (keep on disk, never commit)
+docs/
+.superpowers/
+.cursor/
+.agent/
+.agents/
+.claude/
+.codex/
+.continue/
+.windsurf/
+.aider*
+AGENTS.md
+CLAUDE.md
+.cursorrules
+*-test-out.txt
+
+# Cypress / coverage artifacts
+frontend/frontend/cypress/screenshots/
+frontend/frontend/cypress/videos/
+frontend/frontend/coverage/
+debug-*.log

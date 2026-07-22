@@ -1,5 +1,5 @@
 <template>
-  <div class="about-page">
+  <div class="about-page" data-testid="about-page">
     <!-- Hero Section -->
     <section class="bg-gradient-to-br from-primary-50 via-white to-secondary-50 pt-20 pb-16">
       <div class="container-custom">

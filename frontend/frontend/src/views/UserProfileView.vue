@@ -7,7 +7,7 @@
       </div>
 
       <!-- Error State -->
-      <div v-else-if="error" class="text-center py-12">
+      <div v-else-if="error" class="text-center py-12" data-testid="profile-error">
         <div class="text-6xl mb-4">😕</div>
         <h3 class="text-xl font-semibold text-gray-900 mb-2">Erro ao carregar perfil</h3>
         <p class="text-gray-600 mb-6">{{ error }}</p>
@@ -17,7 +17,7 @@
       </div>
 
       <!-- Profile Content -->
-      <div v-else-if="userProfile" class="space-y-8">
+      <div v-else-if="userProfile" class="space-y-8" data-testid="user-profile-page">
         <!-- Header -->
         <div class="bg-white rounded-xl shadow-sm border p-6">
           <div class="flex items-start justify-between mb-6">
@@ -45,7 +45,8 @@
                 ← Voltar
               </BaseButton>
               <BaseButton 
-                variant="primary" 
+                variant="primary"
+                data-testid="exchange-request-btn"
                 @click="showExchangeModal = true"
                 :disabled="userProfile.skills.length === 0 || mySkills.length === 0"
               >
@@ -125,7 +126,7 @@
     </div>
 
     <!-- Exchange Modal -->
-    <div v-if="showExchangeModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div v-if="showExchangeModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" data-testid="exchange-modal">
       <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-screen overflow-y-auto">
         <div class="p-6 border-b">
           <div class="flex items-center justify-between">
@@ -215,6 +216,7 @@
             <textarea
               v-model="exchangeForm.message"
               rows="4"
+              data-testid="exchange-message"
               class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               placeholder="Conte um pouco sobre sua experiência e por que gostaria de fazer essa troca..."
             ></textarea>
@@ -226,7 +228,8 @@
             Cancelar
           </BaseButton>
           <BaseButton 
-            variant="primary" 
+            variant="primary"
+            data-testid="exchange-submit"
             @click="submitExchangeRequest"
             :disabled="!canSubmitExchange || submittingExchange"
           >

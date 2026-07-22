@@ -1,5 +1,5 @@
 <template>
-  <div class="container mx-auto px-4 py-8">
+  <div class="container mx-auto px-4 py-8" data-testid="contact-page">
     <h1 class="text-3xl font-bold mb-8">Contato</h1>
     <div class="max-w-2xl mx-auto bg-white rounded-lg shadow p-6">
       <form @submit.prevent="handleSubmit" class="space-y-6">
@@ -10,6 +10,7 @@
             v-model="form.name"
             type="text"
             required
+            data-testid="contact-name"
             class="mt-1"
           />
         </div>
@@ -20,6 +21,7 @@
             v-model="form.email"
             type="email"
             required
+            data-testid="contact-email"
             class="mt-1"
           />
         </div>
@@ -30,11 +32,12 @@
             v-model="form.message"
             rows="4"
             required
+            data-testid="contact-message"
             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
           ></textarea>
         </div>
         <div>
-          <BaseButton type="submit" class="w-full">Enviar Mensagem</BaseButton>
+          <BaseButton type="submit" class="w-full" data-testid="contact-submit">Enviar Mensagem</BaseButton>
         </div>
       </form>
     </div>

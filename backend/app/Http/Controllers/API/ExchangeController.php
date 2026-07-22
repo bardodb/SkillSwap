@@ -164,21 +164,23 @@ class ExchangeController extends Controller
                 ], 400);
             }
 
-            // Verificar se já existe uma troca pendente entre estes usuários para estas habilidades
-            $existingExchange = Exchange::where(function($query) use ($initiator, $receiverId, $offeredSkillId, $requestedSkillId) {
-                $query->where('initiator_id', $initiator->id)
-                      ->where('receiver_id', $receiverId)
-                      ->where('offered_skill_id', $offeredSkillId)
-                      ->where('requested_skill_id', $requestedSkillId);
-            })
-            ->orWhere(function($query) use ($initiator, $receiverId, $offeredSkillId, $requestedSkillId) {
-                $query->where('initiator_id', $receiverId)
-                      ->where('receiver_id', $initiator->id)
-                      ->where('offered_skill_id', $requestedSkillId)
-                      ->where('requested_skill_id', $offeredSkillId);
-            })
-            ->whereIn('status', [Exchange::STATUS_PENDING, Exchange::STATUS_ACCEPTED, Exchange::STATUS_SCHEDULED])
-            ->first();
+            // Verificar se já existe uma troca ativa entre estes usuários para estas habilidades
+            $existingExchange = Exchange::query()
+                ->where(function ($query) use ($initiator, $receiverId, $offeredSkillId, $requestedSkillId) {
+                    $query->where(function ($q) use ($initiator, $receiverId, $offeredSkillId, $requestedSkillId) {
+                        $q->where('initiator_id', $initiator->id)
+                            ->where('receiver_id', $receiverId)
+                            ->where('offered_skill_id', $offeredSkillId)
+                            ->where('requested_skill_id', $requestedSkillId);
+                    })->orWhere(function ($q) use ($initiator, $receiverId, $offeredSkillId, $requestedSkillId) {
+                        $q->where('initiator_id', $receiverId)
+                            ->where('receiver_id', $initiator->id)
+                            ->where('offered_skill_id', $requestedSkillId)
+                            ->where('requested_skill_id', $offeredSkillId);
+                    });
+                })
+                ->whereIn('status', [Exchange::STATUS_PENDING, Exchange::STATUS_ACCEPTED, Exchange::STATUS_SCHEDULED])
+                ->first();
 
             if ($existingExchange) {
                 return response()->json([

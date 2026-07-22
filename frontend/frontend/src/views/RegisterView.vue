@@ -25,6 +25,7 @@
             placeholder="Seu nome"
             required
             :error="errors.name"
+            data-testid="register-name"
           >
             <template #icon-left>
               <svg class="w-5 h-5 text-secondary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -41,6 +42,7 @@
             placeholder="seu@email.com"
             required
             :error="errors.email"
+            data-testid="register-email"
           >
             <template #icon-left>
               <svg class="w-5 h-5 text-secondary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -58,6 +60,7 @@
             required
             :error="errors.password"
             hint="Mínimo de 8 caracteres"
+            data-testid="register-password"
           >
             <template #icon-left>
               <svg class="w-5 h-5 text-secondary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -89,6 +92,7 @@
             placeholder="••••••••"
             required
             :error="errors.password_confirmation"
+            data-testid="register-password-confirmation"
           >
             <template #icon-left>
               <svg class="w-5 h-5 text-secondary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -133,6 +137,7 @@
             <input
               type="checkbox"
               v-model="form.acceptTerms"
+              data-testid="register-accept-terms"
               class="w-4 h-4 mt-1 text-primary-600 bg-secondary-100 border-secondary-300 rounded focus:ring-primary-500 focus:ring-2"
             />
             <label class="ml-3 text-sm text-secondary-600 leading-relaxed">
@@ -147,7 +152,7 @@
           </div>
 
           <!-- General Error -->
-          <div v-if="errors.general" class="text-center">
+          <div v-if="errors.general" class="text-center" data-testid="register-error">
             <div class="bg-danger-50 border border-danger-200 rounded-xl p-4">
               <div class="flex items-center">
                 <svg class="w-5 h-5 text-danger-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -166,6 +171,7 @@
             :loading="loading"
             full-width
             class="shadow-medium hover:shadow-large"
+            data-testid="register-submit"
           >
             <template #icon-left v-if="!loading">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

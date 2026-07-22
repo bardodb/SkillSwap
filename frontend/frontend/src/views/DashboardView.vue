@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div class="min-h-screen bg-gray-50" data-testid="dashboard-page">
     <!-- Header Dashboard -->
     <div class="bg-white shadow-sm border-b">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -18,7 +18,7 @@
               <span class="w-2 h-2 bg-success-400 rounded-full"></span>
               <span>Online</span>
             </div>
-            <BaseButton variant="primary" size="sm" @click="showAddSkillModal = true">
+            <BaseButton variant="primary" size="sm" data-testid="dashboard-add-skill" @click="showAddSkillModal = true">
               + Nova Skill
             </BaseButton>
           </div>
@@ -42,7 +42,7 @@
     <!-- Dashboard Content -->
     <div v-else class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <!-- Quick Stats Grid -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" data-testid="dashboard-stats">
         <!-- Skills Card -->
         <div class="bg-white rounded-xl shadow-sm border p-6 hover:shadow-md transition-shadow stats-card">
           <div class="flex items-center justify-between">
@@ -218,10 +218,11 @@
                 <div 
                   v-for="skill in userSkills" 
                   :key="skill.id"
+                  data-testid="dashboard-skill-item"
                   class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
                 >
                   <div class="flex items-start justify-between mb-3">
-                    <h3 class="font-semibold text-secondary-900">{{ skill.title }}</h3>
+                    <h3 class="font-semibold text-secondary-900" data-testid="dashboard-skill-title">{{ skill.title }}</h3>
                     <div class="flex items-center space-x-2">
                       <BaseBadge 
                         :variant="getLevelVariant(skill.level)"
@@ -230,6 +231,7 @@
                         {{ getLevelText(skill.level) }}
                       </BaseBadge>
                       <button 
+                        :data-testid="`dashboard-skill-delete-${skill.id}`"
                         @click="deleteSkill(skill.id)"
                         class="text-danger-500 hover:text-danger-700 text-sm"
                       >
@@ -288,7 +290,7 @@
           </div>
 
           <!-- Skill Matches -->
-          <div class="bg-white rounded-xl shadow-sm border">
+          <div class="bg-white rounded-xl shadow-sm border" data-testid="dashboard-matches">
             <div class="p-6 border-b">
               <div class="flex items-center justify-between">
                 <h2 class="text-lg font-semibold text-gray-900">Matches Recomendados</h2>
@@ -425,11 +427,12 @@
     </div>
 
     <!-- Add Skill Modal -->
-    <div v-if="showAddSkillModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div v-if="showAddSkillModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" data-testid="add-skill-modal">
       <div class="bg-white rounded-xl p-6 w-full max-w-md mx-4">
         <div class="flex items-center justify-between mb-6">
           <h3 class="text-xl font-bold text-secondary-900">Nova Habilidade</h3>
           <button 
+            data-testid="add-skill-close"
             @click="showAddSkillModal = false"
             class="text-secondary-500 hover:text-secondary-700"
           >
@@ -437,20 +440,24 @@
           </button>
         </div>
         
-        <form @submit.prevent="addSkill" class="space-y-4">
+        <form @submit.prevent="addSkill" class="space-y-4" novalidate>
           <BaseInput
             v-model="newSkill.title"
+            data-testid="add-skill-title"
             label="Título da Habilidade"
             placeholder="Ex: Desenvolvimento Laravel"
+            :error="skillFormErrors.title"
             required
           />
           
           <BaseInput
             v-model="newSkill.description"
+            data-testid="add-skill-description"
             label="Descrição"
             type="textarea"
             placeholder="Descreva sua habilidade e o que você pode ensinar..."
             rows="3"
+            :error="skillFormErrors.description"
             required
           />
           
@@ -458,6 +465,7 @@
             <label class="block text-sm font-medium text-secondary-700 mb-2">Nível</label>
             <select 
               v-model="newSkill.level"
+              data-testid="add-skill-level"
               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               required
             >
@@ -467,12 +475,14 @@
               <option value="advanced">Avançado</option>
               <option value="expert">Especialista</option>
             </select>
+            <div v-if="skillFormErrors.level" class="form-error">{{ skillFormErrors.level }}</div>
           </div>
           
           <div>
             <label class="block text-sm font-medium text-secondary-700 mb-2">Categoria</label>
             <select 
               v-model="newSkill.category_id"
+              data-testid="add-skill-category"
               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               required
             >
@@ -485,12 +495,14 @@
                 {{ category.name }}
               </option>
             </select>
+            <div v-if="skillFormErrors.category_id" class="form-error">{{ skillFormErrors.category_id }}</div>
           </div>
           
           <div class="flex items-center justify-end space-x-3 pt-4">
             <BaseButton 
               variant="outline" 
               type="button"
+              data-testid="add-skill-cancel"
               @click="showAddSkillModal = false"
             >
               Cancelar
@@ -498,6 +510,7 @@
             <BaseButton 
               variant="primary" 
               type="submit"
+              data-testid="add-skill-submit"
               :disabled="addingSkill"
             >
               {{ addingSkill ? 'Salvando...' : 'Salvar' }}
@@ -610,6 +623,26 @@ const newSkill = ref({
   level: '',
   category_id: null as string | null
 })
+
+const skillFormErrors = ref<Record<string, string>>({})
+
+const validateNewSkill = (): boolean => {
+  const errors: Record<string, string> = {}
+  if (!newSkill.value.title.trim()) {
+    errors.title = 'Título é obrigatório'
+  }
+  if (!newSkill.value.description.trim()) {
+    errors.description = 'Descrição é obrigatória'
+  }
+  if (!newSkill.value.level) {
+    errors.level = 'Selecione o nível'
+  }
+  if (!newSkill.value.category_id) {
+    errors.category_id = 'Selecione uma categoria'
+  }
+  skillFormErrors.value = errors
+  return Object.keys(errors).length === 0
+}
 
 // Estatísticas computadas
 const userStats = computed(() => {
@@ -777,8 +810,11 @@ const loadDashboard = async () => {
 
 // Função para adicionar habilidade
 const addSkill = async () => {
+  if (!validateNewSkill()) return
+
   try {
     addingSkill.value = true
+    skillFormErrors.value = {}
     
     const skillData = {
       ...newSkill.value,
@@ -801,6 +837,7 @@ const addSkill = async () => {
         level: '',
         category_id: null
       }
+      skillFormErrors.value = {}
     } else {
       throw new Error('Erro ao criar habilidade')
     }

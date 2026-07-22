@@ -1,5 +1,5 @@
 <template>
-  <div class="home">
+  <div class="home" data-testid="home-page">
     <!-- Hero Section -->
     <section class="relative overflow-hidden bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 text-white">
       <!-- Background Pattern -->
@@ -101,10 +101,11 @@
           </BaseButton>
         </div>
         
-        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8">
+        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8" data-testid="home-categories">
           <BaseCard 
             v-for="category in categories" 
             :key="category.id"
+            :data-testid="`home-category-${category.id}`"
             hover
             class="cursor-pointer group animate-on-scroll transition-all duration-300 hover:shadow-large"
             @click="goToCategory(category.id)"
@@ -141,6 +142,7 @@
             size="lg"
             tag="router-link"
             to="/skills"
+            data-testid="home-view-all-categories"
             class="group"
           >
             <span>Ver Todas as Categorias</span>
