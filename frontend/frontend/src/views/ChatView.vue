@@ -153,12 +153,22 @@ function normalizeThreadMessage(raw: Record<string, unknown>): ThreadMessage {
   }
 }
 
-function echoUserIdsFromMessages(list: ThreadMessage[]): [number, number] | null {
+function toPositiveIntId(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0) return value
+  if (typeof value === 'string' && /^\d+$/.test(value)) {
+    const n = Number(value)
+    return n > 0 ? n : null
+  }
+  return null
+}
+
+/** Channel names use internal numeric PKs; UI messages expose public UUIDs via normalize. */
+function echoUserIdsFromRawMessages(list: Record<string, unknown>[]): [number, number] | null {
   for (const msg of list) {
-    const rawSender = msg.sender_id
-    const rawReceiver = msg.receiver_id
-    if (typeof rawSender === 'number' && typeof rawReceiver === 'number') {
-      return [rawSender, rawReceiver]
+    const senderId = toPositiveIntId(msg.sender_id)
+    const receiverId = toPositiveIntId(msg.receiver_id)
+    if (senderId !== null && receiverId !== null) {
+      return [senderId, receiverId]
     }
   }
   return null
@@ -278,11 +288,11 @@ function bindEchoConnectionState() {
   }
 }
 
-function subscribeToPartner(partnerId: string, threadMessages: ThreadMessage[]) {
+function subscribeToPartner(partnerId: string, rawMessages: Record<string, unknown>[]) {
   leaveEchoChannel()
   if (!currentUserId.value) return
 
-  const echoIds = echoUserIdsFromMessages(threadMessages)
+  const echoIds = echoUserIdsFromRawMessages(rawMessages)
   if (!echoIds) return
 
   const echo = getEcho()
@@ -321,7 +331,8 @@ async function loadThread(partnerId: string) {
     if (response.data?.success) {
       const data = response.data.data
       activePartner.value = data.partner
-      messages.value = (data.messages ?? []).map((m: Record<string, unknown>) => normalizeThreadMessage(m))
+      const rawMessages = (data.messages ?? []) as Record<string, unknown>[]
+      messages.value = rawMessages.map((m) => normalizeThreadMessage(m))
       canMessage.value = data.can_message ?? false
 
       const existing = conversations.value.find((c) => c.partner.id === partnerId)
@@ -345,7 +356,8 @@ async function loadThread(partnerId: string) {
         })
       }
 
-      subscribeToPartner(partnerId, messages.value)
+      // Use raw API rows (numeric PKs) for Echo private channel — not UUID-normalized thread messages.
+      subscribeToPartner(partnerId, rawMessages)
     }
   } catch (err: unknown) {
     const status = (err as { response?: { status?: number; data?: { message?: string } } })?.response

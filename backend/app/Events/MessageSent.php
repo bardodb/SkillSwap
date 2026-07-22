@@ -15,7 +15,7 @@ class MessageSent implements ShouldBroadcastNow
 
     public function __construct(public Message $message)
     {
-        $this->message->loadMissing('sender:id,name,avatar');
+        $this->message->loadMissing('sender:id,uuid,name,avatar');
     }
 
     public function broadcastOn(): array
@@ -41,7 +41,8 @@ class MessageSent implements ShouldBroadcastNow
             'exchange_id' => $this->message->exchange_id,
             'created_at' => $this->message->created_at,
             'sender' => [
-                'id' => $this->message->sender->id,
+                // Public UUID — matches HasPublicUuid / frontend currentUserId comparisons.
+                'id' => $this->message->sender->uuid,
                 'name' => $this->message->sender->name,
                 'avatar' => $this->message->sender->avatar,
             ],
