@@ -1,6 +1,6 @@
 /// <reference types="cypress" />
 
-describe('Exchanges E2E', () => {
+describe('Trocas E2E', () => {
   const maria = () => Cypress.env('demoMaria') as { email: string; password: string }
   const joao = () => Cypress.env('demoJoao') as { email: string; password: string }
   const carlos = { email: 'carlos@skillswap.com', password: 'password123' }
@@ -118,7 +118,7 @@ describe('Exchanges E2E', () => {
     })
   })
 
-  it('EXCH-02: API duplicate — segunda proposta com mesmas skills retorna 400/422', () => {
+  it('EXCH-02: API — segunda proposta duplicada com mesmas skills retorna 400/422', () => {
     cy.loginApi(joao()).then((joaoAuth) => {
       cy.loginApi(carlos).then((carlosAuth) => {
         cy.apiRequest('GET', '/my-skills', { token: joaoAuth.token }).then((mySkills) => {
@@ -327,7 +327,7 @@ describe('Exchanges E2E', () => {
     })
   })
 
-  it('EXCH-07: initiator não pode aceitar a troca (403)', () => {
+  it('EXCH-07: iniciador não pode aceitar a troca (403)', () => {
     cy.loginApi(joao()).then((joaoAuth) => {
       cy.apiRequest('GET', '/exchanges', { token: joaoAuth.token }).then((list) => {
         expect(list.status).to.eq(200)
@@ -378,7 +378,7 @@ describe('Exchanges E2E', () => {
     })
   })
 
-  it('EXCH-09: troca accepted pode ser marcada completed e dashboard reflete', () => {
+  it('EXCH-09: troca aceita pode ser marcada como concluída e dashboard reflete', () => {
     cy.loginApi(joao()).then((joaoAuth) => {
       cy.loginApi(maria()).then((mariaAuth) => {
         cy.createFreeExchange({

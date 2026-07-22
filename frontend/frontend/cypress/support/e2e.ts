@@ -23,17 +23,18 @@ Cypress.on('uncaught:exception', (err) => {
 if (Cypress.config('isInteractive')) {
   const CLICK_DELAY_MS = 400
 
-  Cypress.Commands.overwrite('click', (originalFn, subject, options) => {
-    const el = subject?.[0] as HTMLElement | undefined
+  // Type params required: default overwrite inference uses click(x, y) overloads.
+  Cypress.Commands.overwrite<'click', 'element'>('click', (originalFn, subject, ...args) => {
+    const el = subject[0] as HTMLElement | undefined
     const tag = el?.tagName?.toLowerCase()
     const isButtonLike =
       tag === 'button' || el?.getAttribute('role') === 'button' || tag === 'a'
 
     if (!isButtonLike) {
-      return originalFn(subject, options)
+      return originalFn(subject, ...args)
     }
 
-    return originalFn(subject, options).then(($el) => {
+    return originalFn(subject, ...args).then(($el) => {
       return new Cypress.Promise((resolve) => {
         setTimeout(() => resolve($el), CLICK_DELAY_MS)
       })

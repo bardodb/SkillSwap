@@ -1,11 +1,11 @@
 /// <reference types="cypress" />
 import chatPage from '../pages/ChatPage'
 
-describe('Messaging E2E', () => {
+describe('Mensagens E2E', () => {
   const maria = () => Cypress.env('demoMaria') as { email: string; password: string }
   const joao = () => Cypress.env('demoJoao') as { email: string; password: string }
 
-  it('CHAT-01: Maria opens seeded conversation with João and sees the first exchange message', () => {
+  it('CHAT-01: Maria abre conversa seedada com João e vê a primeira mensagem da troca', () => {
     cy.loginUi(maria())
     cy.intercept('GET', '**/api/conversations').as('conversations')
     cy.intercept('GET', '**/api/conversations/*').as('thread')
@@ -26,7 +26,7 @@ describe('Messaging E2E', () => {
     chatPage.assertComposerEnabled()
   })
 
-  it('CHAT-02: Maria sends a message and it appears in the thread', () => {
+  it('CHAT-02: Maria envia mensagem e ela aparece no thread', () => {
     const unique = `E2E Maria ${Date.now()}`
 
     cy.loginUi(maria())
@@ -44,7 +44,7 @@ describe('Messaging E2E', () => {
     cy.get('[data-testid="chat-message"]').should('contain', unique)
   })
 
-  it('CHAT-03: João opens deep link /chat?user=<partner uuid> and can message Maria', () => {
+  it('CHAT-03: João abre deep link /chat?user=<uuid do parceiro> e consegue enviar mensagens para Maria', () => {
     cy.loginUi(joao())
     cy.intercept('GET', '**/api/conversations').as('conversations')
 
@@ -65,7 +65,7 @@ describe('Messaging E2E', () => {
     })
   })
 
-  it('CHAT-04: API: creating an exchange creates the first message for the receiver', () => {
+  it('CHAT-04: API: criar troca cria a primeira mensagem para o receptor', () => {
     cy.loginApi(joao()).then((joaoAuth) => {
       cy.loginApi(maria()).then((mariaAuth) => {
         // Use demo skill ids from API responses (UUID strings)
@@ -138,7 +138,7 @@ describe('Messaging E2E', () => {
     })
   })
 
-  it('CHAT-05: API: send gate returns 422 without a live exchange', () => {
+  it('CHAT-05: API: gate de envio retorna 422 sem troca ativa', () => {
     // Register a fresh user with no exchanges, try messaging João
     const email = `e2e.gate.${Date.now()}@test.com`
     cy.request({
@@ -199,7 +199,7 @@ describe('Messaging E2E', () => {
     )
   })
 
-  it('CHAT-07: deep link com UUID inexistente mostra erro sem crash', () => {
+  it('CHAT-07: deep link com UUID inexistente mostra erro sem quebrar', () => {
     cy.loginUi(maria())
     cy.intercept('GET', '**/api/conversations/*').as('missingThread')
 

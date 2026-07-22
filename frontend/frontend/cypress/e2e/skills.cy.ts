@@ -1,14 +1,14 @@
 /// <reference types="cypress" />
 import skillsPage from '../pages/SkillsPage'
 
-describe('Skills E2E', () => {
+describe('Habilidades E2E', () => {
   beforeEach(() => {
     cy.clearAllCookies()
     cy.clearAllLocalStorage()
     cy.clearAllSessionStorage()
   })
 
-  it('SKILL-01: visit /skills, assert skill cards visible', () => {
+  it('SKILL-01: visita /skills e cards de habilidades ficam visíveis', () => {
     cy.intercept('GET', '**/api/skills').as('getSkills')
     cy.intercept('GET', '**/api/categories').as('getCategories')
 
@@ -19,7 +19,7 @@ describe('Skills E2E', () => {
     skillsPage.getSkillCards().should('have.length.greaterThan', 0)
   })
 
-  it('SKILL-02: search matches seeded Laravel skill', () => {
+  it('SKILL-02: busca encontra habilidade Laravel seedada', () => {
     cy.intercept('GET', '**/api/skills').as('getSkills')
 
     skillsPage.visit().assertLoaded()
@@ -31,7 +31,7 @@ describe('Skills E2E', () => {
     cy.get('[data-testid="skills-empty"]').should('not.exist')
   })
 
-  it('SKILL-03: category filter changes results', () => {
+  it('SKILL-03: filtro de categoria altera os resultados', () => {
     cy.intercept('GET', '**/api/skills').as('getSkills')
     cy.intercept('GET', '**/api/categories').as('getCategories')
 
@@ -55,7 +55,7 @@ describe('Skills E2E', () => {
     })
   })
 
-  it('SKILL-04: nonsense search shows empty state', () => {
+  it('SKILL-04: busca sem resultados mostra estado vazio', () => {
     cy.intercept('GET', '**/api/skills').as('getSkills')
 
     skillsPage.visit().assertLoaded()
@@ -66,7 +66,7 @@ describe('Skills E2E', () => {
     skillsPage.getSkillCards().should('not.exist')
   })
 
-  it('SKILL-05: API 500 shows error state', () => {
+  it('SKILL-05: API 500 mostra estado de erro', () => {
     cy.intercept('GET', '**/api/skills', {
       statusCode: 500,
       body: { success: false, message: 'Server error' },
@@ -78,7 +78,7 @@ describe('Skills E2E', () => {
     cy.get('[data-testid="skill-card"]').should('not.exist')
   })
 
-  it('SKILL-06: home category or Ver Todas navigates to /skills', () => {
+  it('SKILL-06: categoria da home ou Ver Todas navega para /skills', () => {
     cy.intercept('GET', '**/api/categories').as('getCategories')
 
     cy.visit('/')

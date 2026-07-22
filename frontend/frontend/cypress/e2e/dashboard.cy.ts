@@ -10,7 +10,7 @@ describe('Dashboard E2E', () => {
     cy.clearAllSessionStorage()
   })
 
-  it('DASH-01: login maria, visit /dashboard, assert stats visible', () => {
+  it('DASH-01: login da Maria, visita /dashboard e estatísticas ficam visíveis', () => {
     cy.loginUi(maria())
     cy.intercept('GET', '**/api/my-skills').as('mySkills')
     cy.intercept('GET', '**/api/user').as('getUser')
@@ -27,7 +27,7 @@ describe('Dashboard E2E', () => {
     })
   })
 
-  it('DASH-02: add skill via modal and assert it appears', () => {
+  it('DASH-02: adiciona habilidade via modal e ela aparece', () => {
     const title = `E2E Skill ${Date.now()}`
 
     cy.loginUi(maria())
@@ -62,7 +62,7 @@ describe('Dashboard E2E', () => {
     })
   })
 
-  it('DASH-03: delete a skill created in test', () => {
+  it('DASH-03: exclui habilidade criada no teste', () => {
     const title = `E2E Delete ${Date.now()}`
 
     cy.loginUi(maria())
@@ -93,7 +93,7 @@ describe('Dashboard E2E', () => {
     })
   })
 
-  it('DASH-04: empty add-skill form shows validation errors', () => {
+  it('DASH-04: formulário vazio de adicionar habilidade mostra erros de validação', () => {
     cy.loginUi(maria())
 
     dashboardPage.visit().assertLoaded()
@@ -106,7 +106,7 @@ describe('Dashboard E2E', () => {
     cy.get('[data-testid="add-skill-modal"]').should('be.visible')
   })
 
-  it('DASH-05: invalid token redirects to login', () => {
+  it('DASH-05: token inválido redireciona para login', () => {
     cy.intercept('GET', '**/api/user', { statusCode: 401, body: { message: 'Unauthenticated' } }).as(
       'getUserUnauthorized'
     )
@@ -136,7 +136,7 @@ describe('Dashboard E2E', () => {
     cy.window().its('localStorage.token').should('not.exist')
   })
 
-  it('DASH-06: matches section is visible', () => {
+  it('DASH-06: seção de matches fica visível', () => {
     cy.loginUi(maria())
     cy.intercept('GET', '**/api/skill-matches').as('getMatches')
 
@@ -156,7 +156,7 @@ describe('Dashboard E2E', () => {
     cy.get('[data-testid="dashboard-exchange-item"]').should('have.length.greaterThan', 0)
   })
 
-  it('DASH-08: click Ver Perfil em um match abre o perfil do usuário', () => {
+  it('DASH-08: clica em Ver Perfil em um match e abre o perfil do usuário', () => {
     cy.loginUi(maria())
     cy.intercept('GET', '**/api/skill-matches').as('getMatches')
 

@@ -1,7 +1,7 @@
 /// <reference types="cypress" />
 import loginPage from '../pages/LoginPage'
 
-describe('Auth E2E', () => {
+describe('Autenticação E2E', () => {
   const maria = () => Cypress.env('demoMaria') as { email: string; password: string }
 
   beforeEach(() => {
@@ -43,7 +43,7 @@ describe('Auth E2E', () => {
     cy.url().should('include', '/dashboard')
   })
 
-  it('AUTH-06: Register válido vai para dashboard', () => {
+  it('AUTH-06: cadastro válido vai para dashboard', () => {
     const email = `e2e.reg.${Date.now()}@test.com`
     loginPage
       .visitRegister()
@@ -52,7 +52,7 @@ describe('Auth E2E', () => {
       .assertOnDashboard()
   })
 
-  it('AUTH-07: Register email duplicado mostra erro', () => {
+  it('AUTH-07: cadastro com email duplicado mostra erro', () => {
     loginPage
       .visitRegister()
       .fillRegister({

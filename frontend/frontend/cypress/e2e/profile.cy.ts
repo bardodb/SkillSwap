@@ -1,6 +1,6 @@
 /// <reference types="cypress" />
 
-describe('Profile E2E', () => {
+describe('Perfil E2E', () => {
   const maria = () => Cypress.env('demoMaria') as { email: string; password: string }
   const joao = () => Cypress.env('demoJoao') as { email: string; password: string }
 

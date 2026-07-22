@@ -1,6 +1,6 @@
 /// <reference types="cypress" />
 
-describe('Static Pages E2E', () => {
+describe('Páginas estáticas E2E', () => {
   const staticPages = [
     { path: '/faq', testId: 'faq-page', heading: 'FAQ' },
     { path: '/help-center', testId: 'help-center-page', heading: 'Central de Ajuda' },
@@ -29,7 +29,7 @@ describe('Static Pages E2E', () => {
     })
   })
 
-  it('STAT-03: ContactView exige campos obrigatórios no submit vazio', () => {
+  it('STAT-03: ContactView exige campos obrigatórios no envio vazio', () => {
     cy.visit('/contact')
     cy.get('[data-testid="contact-page"]').should('be.visible')
 
@@ -43,7 +43,7 @@ describe('Static Pages E2E', () => {
     cy.get('[data-testid="contact-name"] input').should('have.value', '')
   })
 
-  it('STAT-04: footer links navegam para as páginas correspondentes', () => {
+  it('STAT-04: links do footer navegam para as páginas correspondentes', () => {
     const footerLinks: Array<{ text: string; path: string }> = [
       { text: 'Habilidades', path: '/skills' },
       { text: 'Sobre Nós', path: '/about' },
