@@ -1,212 +1,298 @@
-# SkillSwap - Plataforma de Troca de Habilidades
+# SkillSwap
 
-Uma plataforma completa para troca de conhecimentos e habilidades entre pessoas, desenvolvida com Laravel (backend) e Vue.js (frontend).
+Plataforma para troca de conhecimentos e habilidades entre pessoas. Backend em Laravel (API + Reverb) e frontend em Vue.js.
 
-## 🚀 Como Rodar o Projeto
+## Como rodar com Docker
 
-### Opção rápida: Docker
-
-Com Docker e Docker Compose instalados:
+Requisitos: Docker e Docker Compose.
 
 ```bash
 docker compose up --build
 ```
 
-- **Frontend:** http://localhost:8080
-- **Backend (API):** http://localhost:8000
-- **Reverb (WebSocket):** ws://localhost:8081 (chat em tempo real)
-- **PostgreSQL:** serviço interno `db` (dados descartados ao parar os containers)
+Servicos e portas:
 
-Contas de demo (após o seed automático):
+| Servico | URL / porta |
+|---------|-------------|
+| Frontend | http://localhost:8080 |
+| Backend (API) | http://localhost:8000 |
+| Reverb (WebSocket) | ws://localhost:8081 |
+| PostgreSQL | interno (`db:5432`, sem porta publicada) |
 
-| Email | Senha |
-|-------|-------|
-| joao@skillswap.com | password123 |
-| maria@skillswap.com | password123 |
-| carlos@skillswap.com | password123 |
+O que o `docker compose` sobe:
 
-**API identifiers (breaking change):** Public JSON `id` fields for users, skills, categories, exchanges, and messages are **UUID strings**, not incremental integers. Update clients, deep links (e.g. `/chat?user={uuid}`), and request bodies (`receiver_id`, skill ids) accordingly.
+- `db` — PostgreSQL 16
+- `backend` — API Laravel (`php artisan serve`)
+- `reverb` — WebSockets em tempo real
+- `frontend` — SPA Vue buildada e servida pelo nginx
 
-### Chat e mensagens (Reverb)
+Comportamento importante do backend no Docker:
 
-- Acesse **http://localhost:8080/chat** após login.
-- Só é possível **enviar** mensagens enquanto existir uma troca entre os dois usuários com status `pending`, `accepted` ou `scheduled`; o histórico continua visível mesmo após a troca encerrar.
-- Ao solicitar uma troca (`POST /api/exchanges`), o texto do pedido vira a **primeira mensagem** da conversa.
-- O frontend usa **Laravel Echo** + **Reverb** (`VITE_REVERB_*` no build Docker); a autenticação do canal privado é `POST /broadcasting/auth` com Bearer token (CORS liberado para `http://localhost:8080`).
-- **Demo:** entre com João ou Maria — há conversa pré-seedada entre eles (troca pendente + mensagens). João também pode iniciar nova troca com Maria a partir das habilidades no app.
+1. Aguarda o Postgres ficar pronto
+2. Executa `migrate:fresh --seed` a cada start (banco e dados sao recriados)
+3. Sobe a API na porta 8000
 
-Para encerrar e limpar: `docker compose down`
+Dados do Postgres **nao sao persistidos** (sem volume). Ao parar os containers, o banco e descartado.
 
-### Pré-requisitos (sem Docker)
-
-- **PHP 8.1+** com extensões SQLite, mbstring, openssl
-- **Composer** (gerenciador de dependências PHP)
-- **Node.js 18+** e **npm**
-- **Git**
-
-### 1. Configuração do Backend (Laravel)
+Para encerrar:
 
 ```bash
-# Navegue para o diretório backend
-cd backend
-
-# Instale as dependências
-composer install
-
-# Configure o ambiente (se não existir)
-cp .env.example .env
-
-# Gere a chave da aplicação
-php artisan key:generate
-
-# Execute as migrations
-php artisan migrate
-
-# Popule as categorias iniciais
-php artisan db:seed --class=CategorySeeder
-
-# Popule dados de demonstração
-php artisan db:seed --class=DemoDataSeeder
-
-# Inicie o servidor backend
-php artisan serve
+docker compose down
 ```
 
-O backend estará disponível em: **http://localhost:8000**
-
-### 2. Configuração do Frontend (Vue.js)
+Rebuild completo:
 
 ```bash
-# Em um novo terminal, navegue para o frontend
-cd frontend/frontend
-
-# Instale as dependências
-npm install
-
-# Inicie o servidor de desenvolvimento
-npm run dev
+docker compose build --no-cache
+docker compose up --build --force-recreate
 ```
 
-O frontend estará disponível em: **http://localhost:5173**
+### Contas de demonstracao
 
-## 🎯 Como Testar a Integração
+Disponiveis apos o seed automatico (senha: `password123`):
 
-### 1. Verificar se os servidores estão rodando:
-- **Backend:** http://localhost:8000/api/categories (deve retornar JSON com categorias)
-- **Frontend:** http://localhost:5173 (deve carregar a página inicial)
+| Nome | Email | Observacao |
+|------|-------|------------|
+| Joao Silva | joao@skillswap.com | Admin (`is_admin`), Sao Paulo |
+| Maria Santos | maria@skillswap.com | Designer UX/UI |
+| Carlos Oliveira | carlos@skillswap.com | Professor de ingles |
 
-### 2. Testar funcionalidades principais:
+Ha conversa pre-seedada entre Joao e Maria (troca pendente + mensagens). Joao tambem pode iniciar novas trocas a partir das habilidades no app.
 
-1. **Página Inicial**: Deve carregar e exibir as 10 categorias do backend
-2. **Registro**: Crie uma nova conta em "Cadastrar"
-3. **Login**: Entre com as credenciais criadas ou use uma conta de demonstração:
-   - **Email:** joao@skillswap.com
-   - **Senha:** password123
+### Identificadores (UUID)
 
-### 3. Contas de Demonstração Disponíveis:
-
-| Nome | Email | Senha | Descrição |
-|------|-------|-------|-----------|
-| João Silva | joao@skillswap.com | password123 | Desenvolvedor Full Stack |
-| Maria Santos | maria@skillswap.com | password123 | Designer UX/UI |
-| Carlos Oliveira | carlos@skillswap.com | password123 | Professor de Inglês |
-
-## 🎨 Funcionalidades Implementadas
-
-### ✅ Backend (Laravel)
-- ✅ API RESTful completa
-- ✅ Autenticação com Laravel Sanctum
-- ✅ Models e relacionamentos (User, Skill, Category, Exchange, Message)
-- ✅ Controllers funcionais
-- ✅ Migrations e seeders
-- ✅ CORS configurado (API + `/broadcasting/auth`, preflight `OPTIONS`)
-- ✅ Mensagens e conversas (`/api/conversations`, `/api/messages`)
-- ✅ Broadcast em tempo real (Laravel Reverb)
-
-### ✅ Frontend (Vue.js)
-- ✅ Interface responsiva com Tailwind CSS
-- ✅ Gerenciamento de estado com Pinia
-- ✅ Autenticação integrada
-- ✅ Páginas de Login e Registro funcionais
-- ✅ Homepage com categorias dinâmicas
-- ✅ Chat em tempo real (`/chat`, Echo + Reverb)
-- ✅ Navegação e layout completos
-
-## 📁 Estrutura do Projeto
-
-```
-SkillSwap/
-├── backend/              # API Laravel
-│   ├── app/
-│   │   ├── Models/       # Models (User, Skill, Category, etc.)
-│   │   └── Http/Controllers/API/  # Controllers da API
-│   ├── database/
-│   │   ├── migrations/   # Estrutura do banco
-│   │   └── seeders/      # Dados iniciais
-│   └── routes/api.php    # Rotas da API
-│
-├── frontend/frontend/    # Aplicação Vue.js
-│   ├── src/
-│   │   ├── views/        # Páginas (Home, Login, etc.)
-│   │   ├── stores/       # Gerenciamento de estado
-│   │   └── services/     # Integração com API
-│   └── package.json
-│
-└── readme.md             # Este arquivo
-```
-
-## 🔧 Tecnologias Utilizadas
-
-### Backend
-- **Laravel 12** - Framework PHP
-- **Laravel Sanctum** - Autenticação de API
-- **SQLite** - Banco de dados
-
-### Frontend
-- **Vue.js 3** - Framework JavaScript
-- **Pinia** - Gerenciamento de estado
-- **Vue Router** - Roteamento
-- **Axios** - Cliente HTTP
-- **Tailwind CSS** - Framework CSS
-
-## 🌐 Endpoints da API
-
-### Autenticação
-- `POST /api/register` - Registrar usuário
-- `POST /api/login` - Login
-- `POST /api/logout` - Logout
-- `GET /api/user` - Dados do usuário
-
-### Categorias
-- `GET /api/categories` - Listar categorias
-
-### Habilidades
-- `GET /api/skills` - Listar habilidades
-- `POST /api/skills` - Criar habilidade (autenticado)
-
-## 🔧 Próximas Funcionalidades
-
-- [ ] Página de listagem de habilidades
-- [ ] Sistema de busca e filtros
-- [ ] Dashboard do usuário
-- [ ] Sistema de avaliações
-- [ ] Upload de imagens
-- [ ] Notificações
-
-## 📝 Notas de Desenvolvimento
-
-- O backend utiliza SQLite para facilidade de desenvolvimento
-- CORS está configurado para permitir requests do frontend
-- Dados de demonstração incluem 3 usuários e 8 habilidades
-- Tokens de autenticação são armazenados no localStorage
-
-## 🐛 Solução de Problemas
-
-1. **Erro de CORS**: Certifique-se que o backend está rodando na porta 8000
-2. **Erro de conexão**: Verifique se ambos servidores estão ativos
-3. **Erro de autenticação**: Limpe o localStorage do navegador
-4. **Erro de dependências**: Execute `composer install` e `npm install`
+Os campos publicos `id` de users, skills, categories, exchanges e messages sao **strings UUID**, nao inteiros incrementais. Atualize clientes, deep links (`/chat?user={uuid}`, `/users/{uuid}/profile`) e bodies (`receiver_id`, ids de skills) de acordo.
 
 ---
 
-**Desenvolvido com ❤️ para demonstrar integração Laravel + Vue.js**
+## Chat e mensagens (Reverb)
+
+- Acesse http://localhost:8080/chat apos login.
+- So e possivel **enviar** mensagens enquanto existir uma troca entre os dois usuarios com status `pending`, `accepted` ou `scheduled`. O historico permanece visivel apos o encerramento da troca.
+- Ao solicitar uma troca (`POST /api/exchanges`), o texto do pedido vira a **primeira mensagem** da conversa.
+- O frontend usa Laravel Echo + Reverb (`VITE_REVERB_*` no build Docker). Autenticacao do canal privado: `POST /broadcasting/auth` com Bearer token.
+
+---
+
+## Como rodar sem Docker
+
+### Pre-requisitos
+
+- PHP 8.2+ (extensoes: mbstring, openssl; SQLite ou pgsql)
+- Composer
+- Node.js 18+ e npm
+- Git
+
+### Backend
+
+```bash
+cd backend
+composer install
+cp .env.example .env
+php artisan key:generate
+php artisan migrate
+php artisan db:seed
+php artisan serve
+```
+
+Por padrao o `.env.example` usa **SQLite**. O seed (`DatabaseSeeder`) popula categorias e dados de demo.
+
+Para chat em tempo real localmente, configure Reverb no `.env` (`BROADCAST_CONNECTION=reverb` e variaveis `REVERB_*`) e em outro terminal:
+
+```bash
+php artisan reverb:start
+```
+
+API: http://localhost:8000
+
+### Frontend
+
+```bash
+cd frontend/frontend
+npm install
+```
+
+Crie um `.env` (ou exporte as variaveis) alinhado ao backend:
+
+```env
+VITE_API_URL=http://localhost:8000/api
+VITE_REVERB_APP_KEY=skillswap-key
+VITE_REVERB_HOST=localhost
+VITE_REVERB_PORT=8081
+VITE_REVERB_SCHEME=http
+```
+
+```bash
+npm run dev
+```
+
+Frontend (Vite): http://localhost:5173
+
+---
+
+## Funcionalidades
+
+### Backend (Laravel 12)
+
+- API REST com autenticacao Sanctum (Bearer token)
+- OAuth via Socialite (Google e GitHub)
+- Models: User, Skill, Category, Exchange, Message (UUID publico)
+- CRUD de habilidades e categorias (categorias: apenas admin)
+- Trocas (`exchanges`) com status: pending, accepted, rejected, scheduled, completed, cancelled
+- Conversas e mensagens, com gate de envio ligado a troca ativa
+- Broadcast em tempo real (Laravel Reverb)
+- Estatisticas publicas e do usuario autenticado
+- Matching de habilidades (`/api/skill-matches`)
+- CORS liberado; `POST /broadcasting/auth` para canais privados
+- Seeders: 20 categorias, 3 usuarios, 8 habilidades, trocas e mensagens de demo
+
+### Frontend (Vue 3)
+
+| Rota | Descricao | Auth |
+|------|-----------|------|
+| `/` | Home com categorias | Publica |
+| `/login`, `/register` | Login e cadastro (email/senha + OAuth) | Somente visitante |
+| `/auth/callback` | Callback OAuth | Publica |
+| `/skills` | Listagem com busca e filtros | Publica |
+| `/dashboard` | Stats, minhas skills, matches, trocas | Protegida |
+| `/chat` | Chat em tempo real | Protegida |
+| `/profile` | Perfil do usuario logado | Protegida |
+| `/users/:userId/profile` | Perfil publico (UUID) | Publica |
+| `/agenda` | Agenda (stub; integracao futura) | Protegida |
+| `/about`, `/help-center`, `/faq`, `/privacy-policy`, `/terms-of-use`, `/contact` | Paginas estaticas | Publicas |
+
+Tambem: Pinia, Vue Router, Axios, Tailwind CSS, Laravel Echo + pusher-js.
+
+### Ainda nao implementado / parcial
+
+- Agenda: UI de placeholder (sem Google Calendar)
+- Upload de imagens: campos `avatar` / `image` sao strings; sem pipeline de upload
+- Notificacoes push/in-app
+- Sistema completo de avaliacoes (ratings existem em usuarios/trocas; sem fluxo dedicado de reviews)
+
+---
+
+## Estrutura do projeto
+
+```
+SkillSwap/
+├── docker-compose.yml
+├── backend/                 # API Laravel
+│   ├── app/
+│   │   ├── Models/
+│   │   ├── Http/Controllers/API/
+│   │   ├── Events/          # MessageSent (broadcast)
+│   │   └── Services/        # MessageService
+│   ├── database/migrations/
+│   ├── database/seeders/
+│   ├── routes/api.php
+│   ├── Dockerfile
+│   └── docker-entrypoint.sh # migrate:fresh --seed + serve
+├── frontend/frontend/       # SPA Vue.js
+│   ├── src/views/
+│   ├── src/stores/
+│   ├── src/services/
+│   ├── cypress/e2e/
+│   ├── Dockerfile
+│   └── nginx.conf
+└── readme.md
+```
+
+---
+
+## Tecnologias
+
+| Camada | Stack |
+|--------|-------|
+| Backend | Laravel 12, PHP 8.2, Sanctum, Reverb, Socialite |
+| Banco (Docker) | PostgreSQL 16 |
+| Banco (local default) | SQLite |
+| Frontend | Vue 3, Pinia, Vue Router, Axios, Tailwind CSS, Vite 7 |
+| Tempo real | Laravel Echo + Reverb |
+| Testes | PHPUnit 11 (backend), Cypress 15 (E2E frontend) |
+
+---
+
+## Endpoints da API
+
+Base: `/api`. Autenticacao protegida: header `Authorization: Bearer {token}`.
+
+### Publicos
+
+| Metodo | Path | Descricao |
+|--------|------|-----------|
+| POST | `/register` | Registrar usuario |
+| POST | `/login` | Login |
+| GET | `/auth/{provider}/redirect` | URL OAuth (`google`, `github`) |
+| GET | `/auth/{provider}/callback` | Callback OAuth |
+| POST | `/auth/{provider}/token` | Troca de token OAuth |
+| GET | `/categories` | Listar categorias |
+| GET | `/skills` | Listar habilidades (filtros: `user_id`, `category_id`, `level`, `search`) |
+| GET | `/skills/{skill}` | Detalhe de habilidade (UUID) |
+| GET | `/stats` | Estatisticas publicas |
+
+### Autenticados (`auth:sanctum`)
+
+| Metodo | Path | Descricao |
+|--------|------|-----------|
+| POST | `/logout` | Logout |
+| GET | `/user` | Usuario autenticado |
+| PUT | `/profile` | Atualizar perfil |
+| GET | `/users/{userId}/profile` | Perfil de outro usuario (UUID) |
+| GET | `/my-skills` | Habilidades do usuario |
+| GET | `/skill-matches` | Matches sugeridos |
+| POST/PUT/DELETE | `/skills`, `/skills/{skill}` | CRUD de habilidades |
+| POST/PUT/DELETE | `/categories`, `/categories/{category}` | CRUD de categorias (admin) |
+| * | `/exchanges` | Resource de trocas |
+| * | `/messages` | Resource de mensagens |
+| GET | `/conversations` | Lista de conversas |
+| GET | `/conversations/{userId}` | Conversa com um usuario (UUID) |
+| GET | `/user-stats` | Stats do usuario |
+| GET | `/weekly-stats` | Stats semanais |
+
+Outros:
+
+- `POST /broadcasting/auth` — autenticacao de canal privado (Sanctum)
+- `GET /up` — health check
+
+---
+
+## Testes
+
+### Backend (PHPUnit)
+
+```bash
+cd backend
+php artisan test
+```
+
+Cobrem messaging, ownership/IDOR de exchanges, messages, skills/conversations e categorias admin.
+
+### Frontend (Cypress E2E)
+
+Com a stack Docker no ar (frontend em `:8080`, API em `:8000`):
+
+```bash
+cd frontend/frontend
+npm run cy:run
+# ou
+npm run test:e2e
+npm run cy:open
+npm run test:e2e:messaging
+npm run test:journey-gate
+```
+
+Specs principais: auth, dashboard, skills, exchanges, messaging, profile, static-pages.
+
+O `baseUrl` do Cypress aponta para `http://localhost:8080` (frontend Docker).
+
+---
+
+## Solucao de problemas
+
+1. **API nao responde / banco vazio apos restart** — no Docker o entrypoint roda `migrate:fresh --seed` a cada start; aguarde o backend ficar pronto.
+2. **Chat sem tempo real** — confira se o servico `reverb` esta up e se `VITE_REVERB_*` bate com a porta 8081.
+3. **Erro de autenticacao no frontend** — limpe o `localStorage` do navegador e faca login de novo.
+4. **Cypress falha de conexao** — suba `docker compose up --build` antes; o E2E espera frontend em 8080 e API em 8000.
+5. **Dependencias locais** — `composer install` no backend e `npm install` em `frontend/frontend`.
+6. **UUIDs** — se links ou requests usarem IDs numericos, falharao; use os UUIDs retornados pela API.
